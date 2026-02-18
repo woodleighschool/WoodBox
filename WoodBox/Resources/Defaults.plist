@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>snipeIsEnabled</key>
+	<false/>
+	<key>snipeBaseURL</key>
+	<string></string>
+	<key>snipeForSaleStatusID</key>
+	<integer></integer>
+	<key>snipeDeployableStatusID</key>
+	<integer></integer>
+	<key>snipeSpareStatusID</key>
+	<integer></integer>
+	<key>jamfIsEnabled</key>
+	<false/>
+	<key>jamfBaseURL</key>
+	<string></string>
+	<key>jamfClientID</key>
+	<string></string>
+	<key>intuneIsEnabled</key>
+	<false/>
+	<key>intuneTenantID</key>
+	<string></string>
+	<key>intuneClientID</key>
+	<string></string>
+	<key>freshserviceIsEnabled</key>
+	<false/>
+	<key>freshserviceBaseURL</key>
+	<string></string>
+	<key>freshserviceWorkspaceID</key>
+	<integer></integer>
+	<key>freshserviceReturnedMachineServiceItemID</key>
+	<integer></integer>
+	<key>compNowIsEnabled</key>
+	<false/>
+	<key>compNowUsername</key>
+	<string></string>
+	<key>compNowFirstName</key>
+	<string></string>
+	<key>compNowLastName</key>
+	<string></string>
+	<key>compNowAddress</key>
+	<string></string>
+	<key>compNowSuburb</key>
+	<string></string>
+	<key>compNowState</key>
+	<string></string>
+	<key>compNowPostcode</key>
+	<string></string>
+	<key>compNowEmail</key>
+	<string></string>
+	<key>compNowPhone</key>
+	<string></string>
+</dict>
+</plist>

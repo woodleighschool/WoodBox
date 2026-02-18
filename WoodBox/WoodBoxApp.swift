@@ -1,0 +1,47 @@
+//
+//  WoodBoxApp.swift
+//  WoodBox
+//
+//  Created by Alexander Hyde on 8/2/2026.
+//
+
+import SwiftData
+import SwiftUI
+
+@main
+struct WoodBoxApp: App {
+  private let modelTypes: [any PersistentModel.Type] = [
+    Device.self,
+    RepairHistory.self,
+    ReturnHistory.self,
+    SaleHistory.self,
+    DeDuplicateHistory.self,
+  ]
+
+  private let container: ModelContainer
+  private let modelData: ModelData
+
+  // MARK: - Init
+
+  init() {
+    let schema = Schema(modelTypes)
+    container = try! ModelContainer(for: schema)
+    modelData = ModelData(modelContext: ModelContext(container))
+  }
+
+  // MARK: - Body
+
+  var body: some Scene {
+    WindowGroup {
+      ContentView()
+        .environment(modelData)
+    }
+    .modelContainer(container)
+
+    Settings {
+      SettingsView()
+        .environment(modelData)
+    }
+    .modelContainer(container)
+  }
+}
