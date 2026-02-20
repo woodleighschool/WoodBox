@@ -1,5 +1,5 @@
 //
-//  DeDuplicateView.swift
+//  DeviceDeduplicationView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 17/2/2026.
@@ -8,7 +8,7 @@
 import SwiftData
 import SwiftUI
 
-struct DeDuplicateView: View {
+struct DeviceDeduplicationView: View {
   // MARK: - Properties
 
   @Environment(\.modelContext) private var modelContext
@@ -86,7 +86,7 @@ struct DeDuplicateView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("De-Duplicate")
+    .navigationTitle("Device Deduplication")
     .navigationSubtitle("Find and remove duplicate MDM records")
   }
 
@@ -104,7 +104,7 @@ struct DeDuplicateView: View {
         intuneClient: modelData.settings.intuneClient
       )
 
-      let history = DeDuplicateHistory(
+      let history = DeviceDeduplicationHistory(
         deviceSerial: device.serial,
         assetTag: device.assetTag,
         removedProvider: record.provider.rawValue
@@ -153,6 +153,8 @@ struct DuplicateRecordRow: View {
   let settings: AppSettings
   let onDelete: () -> Void
 
+  @Environment(\.openURL) private var openURL
+
   private let relativeFormatter: RelativeDateTimeFormatter = {
     let formatter = RelativeDateTimeFormatter()
     formatter.unitsStyle = .abbreviated
@@ -172,7 +174,6 @@ struct DuplicateRecordRow: View {
         if isLatest {
           Circle()
             .fill(.green)
-            .stroke(Color(nsColor: .controlBackgroundColor), lineWidth: 1.5)
             .frame(width: 8, height: 8)
             .offset(x: 2, y: -2)
         }
@@ -199,9 +200,7 @@ struct DuplicateRecordRow: View {
       Spacer()
 
       Button {
-        if let url = mdmURL {
-          NSWorkspace.shared.open(url)
-        }
+        if let url = mdmURL { openURL(url) }
       } label: {
         Image(systemName: "safari")
       }

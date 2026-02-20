@@ -1,5 +1,5 @@
 //
-//  ForSalePrepView.swift
+//  ReturnCheckInView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 17/2/2026.
@@ -8,7 +8,7 @@
 import SwiftData
 import SwiftUI
 
-struct ForSalePrepView: View {
+struct ReturnCheckInView: View {
   // MARK: - Properties
 
   @Environment(\.modelContext) private var modelContext
@@ -16,14 +16,17 @@ struct ForSalePrepView: View {
 
   @Bindable var deviceSelection: DeviceSelectionState
 
-  @State private var condition: DeviceCondition = .a
-  @State private var notes: String = ""
-  @State private var updateSnipeStatus: Bool = true
+  @State private var endUserName: String = ""
+  @State private var endUserEmail: String = ""
+  @State private var goodCondition: Bool = true
+  @State private var hasCharger: Bool = true
   @State private var deleteInMDM: Bool = false
+  @State private var updateSnipeStatus: Bool = true
+  @State private var createFreshserviceRequest: Bool = true
+  @State private var notes: String = ""
   @State private var isSubmitting: Bool = false
   @State private var alertItem: AlertItem?
   @State private var showDeleteConfirmation: Bool = false
-  @State private var showGradeHelp: Bool = false
 
   // MARK: - Computed Properties
 
@@ -49,42 +52,30 @@ struct ForSalePrepView: View {
         DeviceSummaryCard(device: deviceSelection.selectedDevice, onClear: deviceSelection.clear)
       }
 
-      Section("Condition") {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-          Picker("Condition Grade", selection: $condition) {
-            ForEach(DeviceCondition.allCases, id: \.self) { condition in
-              Text(condition.rawValue)
-                .tag(condition)
-            }
-          }
-          .pickerStyle(.segmented)
-
-          Button {
-            showGradeHelp = true
-          } label: {
-            Image(systemName: "info.circle")
-              .foregroundStyle(.secondary)
-          }
-          .buttonStyle(.plain)
-          .popover(isPresented: $showGradeHelp) {
-            VStack(alignment: .leading, spacing: 8) {
-              Text("Grade Guide")
-                .font(.headline)
-              gradeRow(label: "A", detail: "Like new, no visible wear, fully functional")
-              gradeRow(label: "B", detail: "Minor cosmetic marks, fully functional")
-              gradeRow(label: "C", detail: "Noticeable wear or scratches, fully functional")
-              gradeRow(label: "D", detail: "Significant damage or defects, may have issues")
-            }
-            .padding()
-            .frame(minWidth: 260)
-          }
-        }
-
-        TextField("Notes", text: $notes, prompt: Text("Broken chinbar, missing some keys."), axis: .vertical)
+      Section("Checklist") {
+        Toggle("Good Condition", isOn: $goodCondition)
+        Toggle("Has Charger", isOn: $hasCharger)
+        TextField("Notes", text: $notes, prompt: Text("Missing some keys, will be $149 to be fixed..."), axis: .vertical)
           .lineLimit(3 ... 6)
       }
 
+      Section("End User") {
+        TextField("Name", text: $endUserName)
+        TextField("Email", text: $endUserEmail)
+      }
+
       Section("Automation") {
+        if !activeProviders.isEmpty {
+          Toggle(isOn: $deleteInMDM) {
+            Label {
+              Text("Delete device from \(activeProviders.joined(separator: " and "))")
+            } icon: {
+              Image(systemName: "trash")
+                .foregroundStyle(.red)
+            }
+          }
+        }
+
         Toggle(isOn: snipeToggle) {
           Label {
             Text("Update Snipe-IT Status")
@@ -98,16 +89,18 @@ struct ForSalePrepView: View {
         }
         .disabled(!modelData.settings.snipeIsEnabled)
 
-        if !activeProviders.isEmpty {
-          Toggle(isOn: $deleteInMDM) {
-            Label {
-              Text("Delete device from \(activeProviders.joined(separator: " and "))")
-            } icon: {
-              Image(systemName: "trash")
-                .foregroundStyle(.red)
-            }
+        Toggle(isOn: freshserviceToggle) {
+          Label {
+            Text("Create Return Ticket")
+          } icon: {
+            Image("freshservice")
+              .resizable()
+              .scaledToFit()
+              .padding(4)
+              .background(.white, in: .rect(cornerRadius: 6))
           }
         }
+        .disabled(!modelData.settings.freshserviceIsEnabled)
       }
 
       Button {
@@ -117,7 +110,7 @@ struct ForSalePrepView: View {
           Task { await submit() }
         }
       } label: {
-        Text("Process for Sale")
+        Text("Process Return")
           .frame(maxWidth: .infinity)
       }
       .disabled(deviceSelection.selectedDevice == nil || isSubmitting)
@@ -125,6 +118,22 @@ struct ForSalePrepView: View {
     }
     .formStyle(.grouped)
     .deviceSearch(selection: deviceSelection)
+    .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
+      if let newDevice = deviceSelection.selectedDevice {
+        endUserName = newDevice.assignedUserName ?? ""
+        endUserEmail = newDevice.assignedUserEmail ?? ""
+      }
+    }
+    .onChange(of: modelData.settings.snipeIsEnabled) { _, isEnabled in
+      if !isEnabled { updateSnipeStatus = false }
+    }
+    .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
+      if !isEnabled { createFreshserviceRequest = false }
+    }
+    .task {
+      if !modelData.settings.snipeIsEnabled { updateSnipeStatus = false }
+      if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
+    }
     .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
       Button("Delete", role: .destructive) {
         Task { await submit() }
@@ -140,14 +149,8 @@ struct ForSalePrepView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("For Sale Prep")
-    .navigationSubtitle("Prepare devices for sale")
-    .onChange(of: modelData.settings.snipeIsEnabled) { _, isEnabled in
-      if !isEnabled { updateSnipeStatus = false }
-    }
-    .task {
-      if !modelData.settings.snipeIsEnabled { updateSnipeStatus = false }
-    }
+    .navigationTitle("Return Check-In")
+    .navigationSubtitle("Process returned devices")
   }
 
   // MARK: - Private Helpers
@@ -173,20 +176,40 @@ struct ForSalePrepView: View {
       if updateSnipeStatus, let assetID = device.snipeID, let snipeClient = modelData.settings.snipeClient {
         try await snipeClient.checkinSnipeAsset(
           assetID: assetID,
-          statusID: modelData.settings.snipeForSaleStatusID,
-          note: "Marked for Sale via WoodBox"
+          statusID: modelData.settings.snipeDeployableStatusID,
+          note: "Returned via WoodBox"
         )
       }
 
-      let history = SaleHistory(
+      var ticketID: String?
+      if createFreshserviceRequest, let fsClient = modelData.settings.freshserviceClient {
+        let customFields: FreshserviceCustomFields = [
+          "computer_returned_in_good_condition": .string(goodCondition ? "Yes" : "No"),
+          "returned_with_working_charger": .string(hasCharger ? "Yes" : "No"),
+          "notes": .string(notes),
+        ]
+
+        ticketID = try await fsClient.createFreshserviceServiceRequest(
+          serviceItemDisplayID: modelData.settings.freshserviceReturnedMachineServiceItemID,
+          email: endUserEmail,
+          quantity: 1,
+          customFields: customFields,
+          workspaceID: modelData.settings.freshserviceWorkspaceID
+        )
+      }
+
+      let history = ReturnCheckInHistory(
+        timestamp: Date(),
         deviceSerial: device.serial,
         assetTag: device.assetTag,
-        model: device.model ?? "Unknown",
-        condition: condition,
-        notes: notes
+        goodCondition: goodCondition,
+        hasCharger: hasCharger,
+        notes: notes,
+        freshserviceTicketID: ticketID,
+        assignedUser: endUserName
       )
-
       modelContext.insert(history)
+
       resetForm()
 
     } catch {
@@ -198,10 +221,14 @@ struct ForSalePrepView: View {
 
   private func resetForm() {
     deviceSelection.clear()
-    condition = .a
-    notes = ""
+    endUserName = ""
+    endUserEmail = ""
+    goodCondition = true
+    hasCharger = true
     deleteInMDM = false
+    notes = ""
     updateSnipeStatus = modelData.settings.snipeIsEnabled
+    createFreshserviceRequest = modelData.settings.freshserviceIsEnabled
     alertItem = nil
   }
 
@@ -220,14 +247,16 @@ struct ForSalePrepView: View {
     )
   }
 
-  private func gradeRow(label: String, detail: String) -> some View {
-    HStack(alignment: .top, spacing: 8) {
-      Text(label)
-        .font(.headline)
-        .frame(width: 18, alignment: .leading)
-      Text(detail)
-        .font(.subheadline)
-        .foregroundStyle(.secondary)
-    }
+  private var freshserviceToggle: Binding<Bool> {
+    Binding(
+      get: { modelData.settings.freshserviceIsEnabled && createFreshserviceRequest },
+      set: { newValue in
+        guard modelData.settings.freshserviceIsEnabled else {
+          createFreshserviceRequest = false
+          return
+        }
+        createFreshserviceRequest = newValue
+      }
+    )
   }
 }

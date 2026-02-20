@@ -14,7 +14,7 @@ final class ModelData {
   // MARK: - Scene + navigation
 
   var preferredColumn: NavigationSplitViewColumn = .detail
-  var selectedOption: NavigationOption = .bookRepair
+  var selectedOption: NavigationOption = .repairIntake
   var isInspectorPresented: Bool = false
 
   // MARK: - Domain state

@@ -25,35 +25,35 @@ struct HistoryInspectorView: View {
   @ViewBuilder
   private var content: some View {
     switch option {
-    case .bookRepair:
+    case .repairIntake:
       InspectorList(
         sort: \RepairHistory.timestamp,
         order: .reverse
       ) { (item: RepairHistory) in
-        RepairHistoryRow(entry: item)
+        RepairIntakeHistoryView(entry: item)
       }
 
-    case .returnedMachine:
+    case .returnCheckIn:
       InspectorList(
-        sort: \ReturnHistory.timestamp,
+        sort: \ReturnCheckInHistory.timestamp,
         order: .reverse
-      ) { (item: ReturnHistory) in
-        ReturnHistoryRow(entry: item)
+      ) { (item: ReturnCheckInHistory) in
+        ReturnCheckInHistoryView(entry: item)
       }
 
-    case .forSalePrep:
+    case .salePreparation:
       InspectorList(
-        sort: \SaleHistory.deviceSerial
-      ) { (item: SaleHistory) in
-        SaleHistoryRow(item: item)
+        sort: \SalePreparationHistory.deviceSerial
+      ) { (item: SalePreparationHistory) in
+        SalePreparationHistoryView(item: item)
       }
 
-    case .deDuplicate:
+    case .deviceDeduplication:
       InspectorList(
-        sort: \DeDuplicateHistory.timestamp,
+        sort: \DeviceDeduplicationHistory.timestamp,
         order: .reverse
-      ) { (item: DeDuplicateHistory) in
-        DeDuplicateHistoryRow(entry: item)
+      ) { (item: DeviceDeduplicationHistory) in
+        DeviceDeduplicationHistoryView(entry: item)
       }
     }
   }

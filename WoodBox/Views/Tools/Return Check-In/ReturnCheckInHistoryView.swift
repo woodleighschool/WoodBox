@@ -1,5 +1,5 @@
 //
-//  ReturnHistoryRow.swift
+//  ReturnCheckInHistoryView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 9/2/2026.
@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct ReturnHistoryRow: View {
+struct ReturnCheckInHistoryView: View {
   // MARK: - Properties
 
-  let entry: ReturnHistory
+  let entry: ReturnCheckInHistory
 
   // MARK: - Body
 

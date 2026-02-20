@@ -1,5 +1,5 @@
 //
-//  BookRepairView.swift
+//  RepairIntakeView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 17/2/2026.
@@ -8,7 +8,7 @@
 import SwiftData
 import SwiftUI
 
-struct BookRepairView: View {
+struct RepairIntakeView: View {
   // MARK: - Properties
 
   @Environment(\.modelContext) private var modelContext
@@ -121,7 +121,7 @@ struct BookRepairView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("Book Repair")
+    .navigationTitle("Repair Intake")
     .navigationSubtitle("Log repairs and generate tickets")
   }
 

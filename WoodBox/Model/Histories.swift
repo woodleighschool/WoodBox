@@ -47,10 +47,10 @@ final class RepairHistory {
   }
 }
 
-// MARK: - ReturnHistory
+// MARK: - ReturnCheckInHistory
 
 @Model
-final class ReturnHistory {
+final class ReturnCheckInHistory {
   var timestamp: Date
   var deviceSerial: String
   var assetTag: String
@@ -81,10 +81,10 @@ final class ReturnHistory {
   }
 }
 
-// MARK: - DeDuplicateHistory
+// MARK: - DeviceDeduplicationHistory
 
 @Model
-final class DeDuplicateHistory {
+final class DeviceDeduplicationHistory {
   var timestamp: Date
   var deviceSerial: String
   var assetTag: String
@@ -103,7 +103,7 @@ final class DeDuplicateHistory {
   }
 }
 
-// MARK: - SaleHistory
+// MARK: - SalePreparationHistory
 
 enum DeviceCondition: String, Codable, CaseIterable {
   case a = "A"
@@ -122,7 +122,7 @@ enum DeviceCondition: String, Codable, CaseIterable {
 }
 
 @Model
-final class SaleHistory {
+final class SalePreparationHistory {
   var id: UUID
   var deviceSerial: String
   var assetTag: String

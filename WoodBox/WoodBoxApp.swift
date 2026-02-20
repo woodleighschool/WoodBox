@@ -13,9 +13,9 @@ struct WoodBoxApp: App {
   private let modelTypes: [any PersistentModel.Type] = [
     Device.self,
     RepairHistory.self,
-    ReturnHistory.self,
-    SaleHistory.self,
-    DeDuplicateHistory.self,
+    ReturnCheckInHistory.self,
+    SalePreparationHistory.self,
+    DeviceDeduplicationHistory.self,
   ]
 
   private let container: ModelContainer

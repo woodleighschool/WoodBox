@@ -1,5 +1,5 @@
 //
-//  RepairHistoryRow.swift
+//  RepairIntakeHistoryView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 15/2/2026.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct RepairHistoryRow: View {
+struct RepairIntakeHistoryView: View {
   // MARK: - Properties
 
   let entry: RepairHistory

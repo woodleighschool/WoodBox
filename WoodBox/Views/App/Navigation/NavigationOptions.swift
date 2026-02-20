@@ -8,32 +8,27 @@
 import SwiftUI
 
 enum NavigationOption: String, CaseIterable, Identifiable, Hashable {
-  case bookRepair = "Repair"
-  case returnedMachine = "Return"
-  case forSalePrep = "Sale Prep"
-  case deDuplicate = "De-Duplicate"
+  case repairIntake = "Repair Intake"
+  case deviceDeduplication = "Device Deduplication"
+  case returnCheckIn = "Return Check-In"
+  case salePreparation = "Sale Preparation"
 
-  static let mainPages: [NavigationOption] = [.bookRepair, .returnedMachine, .forSalePrep, .deDuplicate]
+  static let mainPages: [NavigationOption] = [.repairIntake, .returnCheckIn, .salePreparation, .deviceDeduplication]
 
   var id: String {
     rawValue
   }
 
-  var name: LocalizedStringResource {
-    switch self {
-    case .bookRepair: LocalizedStringResource("Repair", comment: "Navigate to repair booking")
-    case .returnedMachine: LocalizedStringResource("Return", comment: "Navigate to returned machine processing")
-    case .forSalePrep: LocalizedStringResource("Sale Prep", comment: "Navigate to sale preparation")
-    case .deDuplicate: LocalizedStringResource("De-Duplicate", comment: "Navigate to duplicate cleanup")
-    }
+  var name: String {
+    rawValue
   }
 
   var symbolName: String {
     switch self {
-    case .bookRepair: "wrench.and.screwdriver"
-    case .returnedMachine: "arrow.uturn.left.circle"
-    case .forSalePrep: "tag"
-    case .deDuplicate: "rectangle.on.rectangle.slash"
+    case .repairIntake: "wrench.and.screwdriver"
+    case .deviceDeduplication: "rectangle.on.rectangle.slash"
+    case .returnCheckIn: "arrow.uturn.left.circle"
+    case .salePreparation: "tag"
     }
   }
 
@@ -41,14 +36,14 @@ enum NavigationOption: String, CaseIterable, Identifiable, Hashable {
   @ViewBuilder
   func view(modelData: ModelData) -> some View {
     switch self {
-    case .bookRepair:
-      BookRepairView(deviceSelection: modelData.deviceSelection)
-    case .returnedMachine:
-      ReturnedMachineView(deviceSelection: modelData.deviceSelection)
-    case .forSalePrep:
-      ForSalePrepView(deviceSelection: modelData.deviceSelection)
-    case .deDuplicate:
-      DeDuplicateView()
+    case .repairIntake:
+      RepairIntakeView(deviceSelection: modelData.deviceSelection)
+    case .deviceDeduplication:
+      DeviceDeduplicationView()
+    case .returnCheckIn:
+      ReturnCheckInView(deviceSelection: modelData.deviceSelection)
+    case .salePreparation:
+      SalePreparationView(deviceSelection: modelData.deviceSelection)
     }
   }
 }

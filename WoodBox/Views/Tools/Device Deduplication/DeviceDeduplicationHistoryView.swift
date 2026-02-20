@@ -1,5 +1,5 @@
 //
-//  DeDuplicateHistoryRow.swift
+//  DeviceDeduplicationHistoryView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 15/2/2026.
@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct DeDuplicateHistoryRow: View {
+struct DeviceDeduplicationHistoryView: View {
   // MARK: - Properties
 
-  let entry: DeDuplicateHistory
+  let entry: DeviceDeduplicationHistory
 
   // MARK: - Body
 

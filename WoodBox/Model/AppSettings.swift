@@ -9,6 +9,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+@MainActor
 @Observable
 final class AppSettings {
   // MARK: - Properties

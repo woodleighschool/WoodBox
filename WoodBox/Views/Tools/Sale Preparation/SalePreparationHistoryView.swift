@@ -1,5 +1,5 @@
 //
-//  SaleHistoryRow.swift
+//  SalePreparationHistoryView.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 9/2/2026.
@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct SaleHistoryRow: View {
+struct SalePreparationHistoryView: View {
   // MARK: - Properties
 
-  let item: SaleHistory
+  let item: SalePreparationHistory
 
   // MARK: - Body
 
