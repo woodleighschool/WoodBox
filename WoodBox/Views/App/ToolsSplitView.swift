@@ -2,7 +2,6 @@
 //  ToolsSplitView.swift
 //  WoodBox
 //
-//  Root navigation scaffold that mirrors Landmarks' split view layout.
 //  Created by Alexander Hyde on 8/2/2026.
 //
 
@@ -14,71 +13,106 @@ struct ToolsSplitView: View {
 
   @Environment(ModelData.self) private var modelData
 
+  private var selection: Binding<NavigationOption?> {
+    Binding(
+      get: { modelData.selectedOption },
+      set: { modelData.selectedOption = $0 }
+    )
+  }
+
+  private var resolvedSelection: NavigationOption? {
+    #if os(macOS)
+      modelData.selectedOption ?? .repairIntake
+    #else
+      modelData.selectedOption
+    #endif
+  }
+
   // MARK: - Body
 
   var body: some View {
     @Bindable var modelData = modelData
 
     NavigationSplitView(preferredCompactColumn: $modelData.preferredColumn) {
-      SidebarList(modelData: modelData)
+      SidebarList(selection: selection)
     } detail: {
-      DetailPane(modelData: modelData)
-    }
-    .modifier(HistoryInspectorToggle(modelData: modelData))
-  }
-}
-
-// MARK: - Subviews
-
-private struct SidebarList: View {
-  @Bindable var modelData: ModelData
-
-  var body: some View {
-    List(selection: $modelData.selectedOption) {
-      Section("Tools") {
-        ForEach(NavigationOption.mainPages) { option in
-          NavigationLink(value: option) {
-            Label(option.name, systemImage: option.symbolName)
-          }
-        }
+      if let option = resolvedSelection {
+        DetailPane(option: option, modelData: modelData, isInspectorPresented: $modelData.isInspectorPresented)
       }
     }
-    .listStyle(.sidebar)
-    .navigationTitle("WoodBox")
-    .frame(minWidth: 180)
+    .modifier(HistoryInspectorToggle(selectedOption: resolvedSelection, isInspectorPresented: $modelData.isInspectorPresented))
   }
 }
 
 private struct DetailPane: View {
-  @Bindable var modelData: ModelData
+  let option: NavigationOption
+  let modelData: ModelData
+  @Binding var isInspectorPresented: Bool
 
   var body: some View {
-    modelData.selectedOption.view(modelData: modelData)
+    NavigationStack {
+      option.view(modelData: modelData)
+        .toolbar {
+          if option != .settings {
+            ToolbarItem(placement: .primaryAction) {
+              Button {
+                isInspectorPresented.toggle()
+              } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+              }
+            }
+          }
+        }
+    }
+    .id(option)
+  }
+}
+
+private struct SidebarList: View {
+  var selection: Binding<NavigationOption?>
+
+  var body: some View {
+    List(selection: selection) {
+      Section("Tools") {
+        ForEach(NavigationOption.mainPages) { option in
+          Label(option.name, systemImage: option.symbolName)
+            .tag(option)
+        }
+      }
+      #if os(iOS)
+        Section("Preferences") {
+          Label(NavigationOption.settings.name, systemImage: NavigationOption.settings.symbolName)
+            .tag(NavigationOption.settings)
+        }
+      #endif
+    }
+    .listStyle(.sidebar)
+    .navigationTitle("WoodBox")
+    .toolbar {
+      ToolbarItem(placement: .automatic) {
+        CacheRefreshButton()
+      }
+    }
+    #if os(macOS)
+    .frame(minWidth: 180)
+    #endif
   }
 }
 
 // MARK: - Modifiers
 
 private struct HistoryInspectorToggle: ViewModifier {
-  @Bindable var modelData: ModelData
+  let selectedOption: NavigationOption?
+  @Binding var isInspectorPresented: Bool
 
   func body(content: Content) -> some View {
     content
-      .inspector(isPresented: $modelData.isInspectorPresented) {
-        HistoryInspectorView(option: modelData.selectedOption)
-          .inspectorColumnWidth(min: 250, ideal: 250, max: 250)
-      }
-      .toolbar {
-        ToolbarItem(placement: .primaryAction) {
-          Button {
-            modelData.isInspectorPresented.toggle()
-          } label: {
-            Label("History", systemImage: "clock.arrow.circlepath")
-          }
-        }
-
-        ToolbarItem(placement: .status) {
-          CacheRefreshButton()
+      .inspector(isPresented: $isInspectorPresented) {
+        if let option = selectedOption {
+          HistoryInspectorView(option: option)
+          #if os(macOS)
+            .inspectorColumnWidth(min: 250, ideal: 250, max: 250)
+          #endif
         }
       }
   }

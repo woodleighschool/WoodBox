@@ -14,6 +14,38 @@ private enum ConnectionTestResult: Equatable {
   case failure(String)
 }
 
+private enum SettingsSection: CaseIterable, Identifiable {
+  case snipe
+  case jamf
+  case intune
+  case freshservice
+  case compnow
+
+  var id: Self {
+    self
+  }
+
+  var title: String {
+    switch self {
+    case .snipe: "Snipe-IT"
+    case .jamf: "Jamf Pro"
+    case .intune: "Intune"
+    case .freshservice: "Freshservice"
+    case .compnow: "CompNow"
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .snipe: "server.rack"
+    case .jamf: "laptopcomputer"
+    case .intune: "window.ceiling"
+    case .freshservice: "person.crop.circle.badge.questionmark"
+    case .compnow: "shippingbox"
+    }
+  }
+}
+
 // MARK: - SettingsView
 
 struct SettingsView: View {
@@ -24,24 +56,54 @@ struct SettingsView: View {
   // MARK: - Body
 
   var body: some View {
-    TabView {
+    #if os(macOS)
+      TabView {
+        settingsDestination(.snipe)
+          .tabItem { Label(SettingsSection.snipe.title, systemImage: SettingsSection.snipe.systemImage) }
+
+        settingsDestination(.jamf)
+          .tabItem { Label(SettingsSection.jamf.title, systemImage: SettingsSection.jamf.systemImage) }
+
+        settingsDestination(.intune)
+          .tabItem { Label(SettingsSection.intune.title, systemImage: SettingsSection.intune.systemImage) }
+
+        settingsDestination(.freshservice)
+          .tabItem {
+            Label(SettingsSection.freshservice.title, systemImage: SettingsSection.freshservice.systemImage)
+          }
+
+        settingsDestination(.compnow)
+          .tabItem { Label(SettingsSection.compnow.title, systemImage: SettingsSection.compnow.systemImage) }
+      }
+      .frame(minWidth: 500, minHeight: 400)
+      .padding()
+    #else
+      List(SettingsSection.allCases) { section in
+        NavigationLink {
+          settingsDestination(section)
+            .navigationTitle(section.title)
+        } label: {
+          Label(section.title, systemImage: section.systemImage)
+        }
+      }
+      .navigationTitle("Settings")
+    #endif
+  }
+
+  @ViewBuilder
+  private func settingsDestination(_ section: SettingsSection) -> some View {
+    switch section {
+    case .snipe:
       SnipeSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
-        .tabItem { Label("Snipe-IT", systemImage: "server.rack") }
-
+    case .jamf:
       JamfSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
-        .tabItem { Label("Jamf Pro", systemImage: "laptopcomputer") }
-
+    case .intune:
       IntuneSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
-        .tabItem { Label("Intune", systemImage: "window.ceiling") }
-
+    case .freshservice:
       FreshserviceSettingsView(settings: modelData.settings)
-        .tabItem { Label("Freshservice", systemImage: "person.crop.circle.badge.questionmark") }
-
+    case .compnow:
       CompNowSettingsView(settings: modelData.settings)
-        .tabItem { Label("CompNow", systemImage: "shippingbox") }
     }
-    .frame(minWidth: 500, minHeight: 400)
-    .padding()
   }
 }
 
@@ -73,27 +135,12 @@ struct SnipeSettingsView: View {
               }
             }
           }
+
         TextField("Base URL", text: $settings.snipeBaseURL)
         SecureField("API Key", text: $settings.snipeAPIKey)
 
-        HStack {
-          Button("Test Connection") {
-            Task { await testConnection() }
-          }
-          .disabled(isTesting || settings.snipeBaseURL.isEmpty)
-
-          if isTesting { ProgressView().controlSize(.small) }
-          switch testResult {
-          case .success:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          case let .failure(message):
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-              .help(message)
-          case .none:
-            EmptyView()
-          }
+        testRow(disabled: settings.snipeBaseURL.isEmpty) {
+          await testConnection()
         }
       }
 
@@ -110,20 +157,41 @@ struct SnipeSettingsView: View {
   private func testConnection() async {
     isTesting = true
     testResult = nil
+    defer { isTesting = false }
 
-    if let url = URL(string: settings.snipeBaseURL) {
-      let client = SnipeITClient(baseURL: url, apiToken: settings.snipeAPIKey)
-      do {
-        try await client.testSnipeConnection()
-        testResult = .success
-      } catch {
-        testResult = .failure("Failed: \(error.localizedDescription)")
-      }
-    } else {
+    guard let url = URL(string: settings.snipeBaseURL) else {
       testResult = .failure("Invalid URL")
+      return
     }
 
-    isTesting = false
+    let client = SnipeITClient(baseURL: url, apiToken: settings.snipeAPIKey)
+    do {
+      try await client.testSnipeConnection()
+      testResult = .success
+    } catch {
+      testResult = .failure("Failed: \(error.localizedDescription)")
+    }
+  }
+
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+    HStack {
+      Button("Test Connection") { Task { await action() } }
+        .disabled(isTesting || disabled)
+
+      if isTesting { ProgressView().controlSize(.small) }
+
+      switch testResult {
+      case .success:
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      case let .failure(message):
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.red)
+          .help(message)
+      case .none:
+        EmptyView()
+      }
+    }
   }
 }
 
@@ -152,28 +220,13 @@ struct JamfSettingsView: View {
               }
             }
           }
+
         TextField("Base URL", text: $settings.jamfBaseURL)
         TextField("Client ID", text: $settings.jamfClientID)
         SecureField("Client Secret", text: $settings.jamfClientSecret)
 
-        HStack {
-          Button("Test Connection") {
-            Task { await testConnection() }
-          }
-          .disabled(isTesting || settings.jamfBaseURL.isEmpty)
-
-          if isTesting { ProgressView().controlSize(.small) }
-          switch testResult {
-          case .success:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          case let .failure(message):
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-              .help(message)
-          case .none:
-            EmptyView()
-          }
+        testRow(disabled: settings.jamfBaseURL.isEmpty) {
+          await testConnection()
         }
 
         if settings.snipeIsEnabled == false {
@@ -192,24 +245,45 @@ struct JamfSettingsView: View {
   private func testConnection() async {
     isTesting = true
     testResult = nil
+    defer { isTesting = false }
 
-    if let url = URL(string: settings.jamfBaseURL) {
-      let client = JamfClient(
-        baseURL: url,
-        clientID: settings.jamfClientID,
-        clientSecret: settings.jamfClientSecret
-      )
-      do {
-        try await client.testJamfConnection()
-        testResult = .success
-      } catch {
-        testResult = .failure("Failed: \(error.localizedDescription)")
-      }
-    } else {
+    guard let url = URL(string: settings.jamfBaseURL) else {
       testResult = .failure("Invalid URL")
+      return
     }
 
-    isTesting = false
+    let client = JamfClient(
+      baseURL: url,
+      clientID: settings.jamfClientID,
+      clientSecret: settings.jamfClientSecret
+    )
+    do {
+      try await client.testJamfConnection()
+      testResult = .success
+    } catch {
+      testResult = .failure("Failed: \(error.localizedDescription)")
+    }
+  }
+
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+    HStack {
+      Button("Test Connection") { Task { await action() } }
+        .disabled(isTesting || disabled)
+
+      if isTesting { ProgressView().controlSize(.small) }
+
+      switch testResult {
+      case .success:
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      case let .failure(message):
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.red)
+          .help(message)
+      case .none:
+        EmptyView()
+      }
+    }
   }
 }
 
@@ -238,28 +312,13 @@ struct IntuneSettingsView: View {
               }
             }
           }
+
         TextField("Tenant ID", text: $settings.intuneTenantID)
         TextField("Client ID", text: $settings.intuneClientID)
         SecureField("Client Secret", text: $settings.intuneClientSecret)
 
-        HStack {
-          Button("Test Connection") {
-            Task { await testConnection() }
-          }
-          .disabled(isTesting)
-
-          if isTesting { ProgressView().controlSize(.small) }
-          switch testResult {
-          case .success:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          case let .failure(message):
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-              .help(message)
-          case .none:
-            EmptyView()
-          }
+        testRow {
+          await testConnection()
         }
 
         if settings.snipeIsEnabled == false {
@@ -278,20 +337,41 @@ struct IntuneSettingsView: View {
   private func testConnection() async {
     isTesting = true
     testResult = nil
+    defer { isTesting = false }
 
     let client = IntuneClient(
       tenantID: settings.intuneTenantID,
       clientID: settings.intuneClientID,
       clientSecret: settings.intuneClientSecret
     )
+
     do {
       try await client.testIntuneConnection()
       testResult = .success
     } catch {
       testResult = .failure("Failed: \(error.localizedDescription)")
     }
+  }
 
-    isTesting = false
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+    HStack {
+      Button("Test Connection") { Task { await action() } }
+        .disabled(isTesting || disabled)
+
+      if isTesting { ProgressView().controlSize(.small) }
+
+      switch testResult {
+      case .success:
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      case let .failure(message):
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.red)
+          .help(message)
+      case .none:
+        EmptyView()
+      }
+    }
   }
 }
 
@@ -312,31 +392,16 @@ struct FreshserviceSettingsView: View {
         TextField("Base URL", text: $settings.freshserviceBaseURL)
         SecureField("API Key", text: $settings.freshserviceAPIKey)
 
-        HStack {
-          Button("Test Connection") {
-            Task { await testConnection() }
-          }
-          .disabled(isTesting || settings.freshserviceBaseURL.isEmpty)
-
-          if isTesting { ProgressView().controlSize(.small) }
-          switch testResult {
-          case .success:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          case let .failure(message):
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-              .help(message)
-          case .none:
-            EmptyView()
-          }
+        testRow(disabled: settings.freshserviceBaseURL.isEmpty) {
+          await testConnection()
         }
       }
 
       Section("Configuration") {
         TextField("Workspace ID", value: $settings.freshserviceWorkspaceID, format: .number)
         TextField(
-          "Return Service Item ID", value: $settings.freshserviceReturnedMachineServiceItemID,
+          "Return Service Item ID",
+          value: $settings.freshserviceReturnedMachineServiceItemID,
           format: .number
         )
       }
@@ -350,20 +415,41 @@ struct FreshserviceSettingsView: View {
   private func testConnection() async {
     isTesting = true
     testResult = nil
+    defer { isTesting = false }
 
-    if let url = URL(string: settings.freshserviceBaseURL) {
-      let client = FreshserviceClient(baseURL: url, apiKey: settings.freshserviceAPIKey)
-      do {
-        try await client.testFreshserviceConnection()
-        testResult = .success
-      } catch {
-        testResult = .failure("Failed: \(error.localizedDescription)")
-      }
-    } else {
+    guard let url = URL(string: settings.freshserviceBaseURL) else {
       testResult = .failure("Invalid URL")
+      return
     }
 
-    isTesting = false
+    let client = FreshserviceClient(baseURL: url, apiKey: settings.freshserviceAPIKey)
+    do {
+      try await client.testFreshserviceConnection()
+      testResult = .success
+    } catch {
+      testResult = .failure("Failed: \(error.localizedDescription)")
+    }
+  }
+
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+    HStack {
+      Button("Test Connection") { Task { await action() } }
+        .disabled(isTesting || disabled)
+
+      if isTesting { ProgressView().controlSize(.small) }
+
+      switch testResult {
+      case .success:
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      case let .failure(message):
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.red)
+          .help(message)
+      case .none:
+        EmptyView()
+      }
+    }
   }
 }
 
@@ -385,24 +471,8 @@ struct CompNowSettingsView: View {
         SecureField("Password", text: $settings.compNowPassword)
         SecureField("API Key", text: $settings.compNowAPIKey)
 
-        HStack {
-          Button("Test Connection") {
-            Task { await testConnection() }
-          }
-          .disabled(isTesting)
-
-          if isTesting { ProgressView().controlSize(.small) }
-          switch testResult {
-          case .success:
-            Image(systemName: "checkmark.circle.fill")
-              .foregroundStyle(.green)
-          case let .failure(message):
-            Image(systemName: "xmark.circle.fill")
-              .foregroundStyle(.red)
-              .help(message)
-          case .none:
-            EmptyView()
-          }
+        testRow {
+          await testConnection()
         }
       }
 
@@ -426,6 +496,7 @@ struct CompNowSettingsView: View {
   private func testConnection() async {
     isTesting = true
     testResult = nil
+    defer { isTesting = false }
 
     let client = CompNowClient(
       apiKey: settings.compNowAPIKey,
@@ -439,7 +510,26 @@ struct CompNowSettingsView: View {
     } catch {
       testResult = .failure("Failed: \(error.localizedDescription)")
     }
+  }
 
-    isTesting = false
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+    HStack {
+      Button("Test Connection") { Task { await action() } }
+        .disabled(isTesting || disabled)
+
+      if isTesting { ProgressView().controlSize(.small) }
+
+      switch testResult {
+      case .success:
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundStyle(.green)
+      case let .failure(message):
+        Image(systemName: "xmark.circle.fill")
+          .foregroundStyle(.red)
+          .help(message)
+      case .none:
+        EmptyView()
+      }
+    }
   }
 }

@@ -12,6 +12,7 @@ enum NavigationOption: String, CaseIterable, Identifiable, Hashable {
   case deviceDeduplication = "Device Deduplication"
   case returnCheckIn = "Return Check-In"
   case salePreparation = "Sale Preparation"
+  case settings = "Settings"
 
   static let mainPages: [NavigationOption] = [.repairIntake, .returnCheckIn, .salePreparation, .deviceDeduplication]
 
@@ -29,6 +30,7 @@ enum NavigationOption: String, CaseIterable, Identifiable, Hashable {
     case .deviceDeduplication: "rectangle.on.rectangle.slash"
     case .returnCheckIn: "arrow.uturn.left.circle"
     case .salePreparation: "tag"
+    case .settings: "gear"
     }
   }
 
@@ -44,6 +46,8 @@ enum NavigationOption: String, CaseIterable, Identifiable, Hashable {
       ReturnCheckInView(deviceSelection: modelData.deviceSelection)
     case .salePreparation:
       SalePreparationView(deviceSelection: modelData.deviceSelection)
+    case .settings:
+      SettingsView()
     }
   }
 }

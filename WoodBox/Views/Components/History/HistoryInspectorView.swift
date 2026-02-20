@@ -55,6 +55,9 @@ struct HistoryInspectorView: View {
       ) { (item: DeviceDeduplicationHistory) in
         DeviceDeduplicationHistoryView(entry: item)
       }
+
+    case .settings:
+      EmptyView()
     }
   }
 }
