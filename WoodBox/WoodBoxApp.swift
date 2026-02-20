@@ -33,15 +33,17 @@ struct WoodBoxApp: App {
 
   var body: some Scene {
     WindowGroup {
-      ContentView()
+      ToolsSplitView()
         .environment(modelData)
     }
     .modelContainer(container)
 
-    Settings {
-      SettingsView()
-        .environment(modelData)
-    }
-    .modelContainer(container)
+    #if os(macOS)
+      Settings {
+        SettingsView()
+          .environment(modelData)
+      }
+      .modelContainer(container)
+    #endif
   }
 }

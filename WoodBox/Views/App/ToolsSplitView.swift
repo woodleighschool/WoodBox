@@ -1,14 +1,15 @@
 //
-//  ContentView.swift
+//  ToolsSplitView.swift
 //  WoodBox
 //
+//  Root navigation scaffold that mirrors Landmarks' split view layout.
 //  Created by Alexander Hyde on 8/2/2026.
 //
 
 import SwiftData
 import SwiftUI
 
-struct ContentView: View {
+struct ToolsSplitView: View {
   // MARK: - Properties
 
   @Environment(ModelData.self) private var modelData
