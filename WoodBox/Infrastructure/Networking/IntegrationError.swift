@@ -17,11 +17,12 @@ struct IntegrationError: LocalizedError, Sendable {
   // MARK: - LocalizedError
 
   var errorDescription: String? {
-    let statusText = if let statusCode {
-      "\(Self.statusLabel(for: statusCode)) (\(statusCode))"
-    } else {
-      "Unknown error"
-    }
+    let statusText =
+      if let statusCode {
+        "\(Self.statusLabel(for: statusCode)) (\(statusCode))"
+      } else {
+        "Unknown error"
+      }
     return "Failed to \(action) via \(integration): \(statusText)"
   }
 

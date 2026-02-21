@@ -11,12 +11,10 @@ import SwiftUI
 struct RepairIntakeView: View {
   // MARK: - Properties
 
-  @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
   @Bindable var deviceSelection: DeviceSelectionState
   @State private var selectedSpare: Device?
-  @Query(sort: \Device.name) private var allDevices: [Device]
 
   @State private var endUserName: String = ""
   @State private var endUserEmail: String = ""
@@ -27,39 +25,41 @@ struct RepairIntakeView: View {
   @State private var isSubmitting: Bool = false
   @State private var alertItem: AlertItem?
 
-  // MARK: - Computed Properties
-
-  private var spareDevices: [Device] {
-    allDevices.filter { $0.statusID == modelData.settings.snipeSpareStatusID }
-  }
+  // MARK: - Body
 
   var body: some View {
     Form {
       Section("Device") {
-        DeviceSummaryCard(device: deviceSelection.selectedDevice, onClear: deviceSelection.clear)
+        DeviceSummaryCard(
+          device: deviceSelection.selectedDevice,
+          onClear: deviceSelection.clear
+        )
       }
 
-      Section("Details") {
+      Section {
         TextField("Problem", text: $problem, prompt: Text("e.g. Broken Screen"))
 
-        Picker("Spare Device", selection: $selectedSpare) {
-          Text("None").tag(nil as Device?)
-          ForEach(spareDevices) { spare in
-            Text(spare.name ?? spare.assetTag).tag(spare as Device?)
-          }
-        }
-        TextField("Notes", text: $notes,
-                  prompt: Text("Customer states device won't turn on, observed liquid pouring out of the device. Suspected liquid damage."),
-                  axis: .vertical)
-          .lineLimit(3 ... 6)
+        SparePicker(spareStatusID: modelData.settings.snipeSpareStatusID, selection: $selectedSpare)
+        TextField(
+          "Notes", text: $notes,
+          prompt: Text(
+            "Customer states device won't turn on, observed liquid pouring out of the device. Suspected liquid damage."
+          ),
+          axis: .vertical
+        )
+        .lineLimit(3 ... 6)
+      } header: {
+        Label("Details", systemImage: "pencil")
       }
 
-      Section("End User") {
+      Section {
         TextField("Name", text: $endUserName)
         TextField("Email", text: $endUserEmail)
+      } header: {
+        Label("End User", systemImage: "person.crop.circle")
       }
 
-      Section("Automation") {
+      Section {
         Toggle(isOn: compNowToggle) {
           Label {
             Text("Create CompNow Ticket")
@@ -67,8 +67,6 @@ struct RepairIntakeView: View {
             Image("compnow")
               .resizable()
               .scaledToFit()
-              .padding(4)
-              .background(.background, in: .rect(cornerRadius: 6))
           }
         }
         .disabled(!modelData.settings.compNowIsEnabled)
@@ -80,24 +78,28 @@ struct RepairIntakeView: View {
             Image("freshservice")
               .resizable()
               .scaledToFit()
-              .padding(4)
-              .background(.background, in: .rect(cornerRadius: 6))
           }
         }
         .disabled(!modelData.settings.freshserviceIsEnabled)
+      } header: {
+        Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
       }
-
-      Button {
-        Task { await submit() }
-      } label: {
-        Text("Submit Repair")
-          .frame(maxWidth: .infinity)
-      }
-      .disabled(deviceSelection.selectedDevice == nil || problem.isEmpty || isSubmitting)
-      .buttonStyle(.borderedProminent)
     }
     .deviceSearch(selection: deviceSelection)
     .formStyle(.grouped)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        if isSubmitting {
+          ProgressView().controlSize(.small)
+        } else {
+          Button("Submit") {
+            Task { await submit() }
+          }
+          .disabled(deviceSelection.selectedDevice == nil || problem.isEmpty)
+          .buttonStyle(.borderedProminent)
+        }
+      }
+    }
     .onChange(of: deviceSelection.selectedDevice) { _, newDevice in
       if let newDevice {
         endUserName = newDevice.assignedUserName ?? ""
@@ -121,8 +123,6 @@ struct RepairIntakeView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("Repair Intake")
-    .navigationSubtitle("Log repairs and generate tickets")
   }
 
   // MARK: - Private Helpers
@@ -135,12 +135,11 @@ struct RepairIntakeView: View {
 
     do {
       var compNowTicketID: String?
-      var freshserviceTicketID: String?
 
       if createCompNowTicket, let client = modelData.settings.compNowClient {
         let ticket = CompNowTicket(
           endUser: endUserName,
-          product: device.model ?? "Unknown",
+          product: device.model,
           serial: device.serial,
           firstName: modelData.settings.compNowFirstName,
           lastName: modelData.settings.compNowLastName,
@@ -169,7 +168,7 @@ struct RepairIntakeView: View {
           customFields["compnow_ticket_no"] = .string(cnTicket)
         }
 
-        freshserviceTicketID = try await client.createFreshserviceTicket(
+        _ = try await client.createFreshserviceTicket(
           email: endUserEmail,
           subject: "REPAIR - \(problem)",
           description: notes,
@@ -177,19 +176,6 @@ struct RepairIntakeView: View {
           workspaceID: modelData.settings.freshserviceWorkspaceID
         )
       }
-
-      let history = RepairHistory(
-        timestamp: Date(),
-        deviceSerial: device.serial,
-        assetTag: device.assetTag,
-        problem: problem,
-        spareAssetTag: selectedSpare?.assetTag,
-        notes: notes,
-        compNowTicketID: compNowTicketID,
-        freshserviceTicketID: freshserviceTicketID,
-        assignedUser: endUserName
-      )
-      modelContext.insert(history)
 
       resetForm()
     } catch {
@@ -237,5 +223,29 @@ struct RepairIntakeView: View {
         createFreshserviceTicket = newValue
       }
     )
+  }
+}
+
+// MARK: - Subviews
+
+private struct SparePicker: View {
+  @Query private var spareDevices: [Device]
+  @Binding var selection: Device?
+
+  init(spareStatusID: Int, selection: Binding<Device?>) {
+    _selection = selection
+    _spareDevices = Query(
+      filter: #Predicate<Device> { $0.statusID == spareStatusID },
+      sort: \Device.name
+    )
+  }
+
+  var body: some View {
+    Picker("Spare Device", selection: $selection) {
+      Text("None").tag(nil as Device?)
+      ForEach(spareDevices) { spare in
+        Text(spare.name ?? spare.assetTag).tag(spare as Device?)
+      }
+    }
   }
 }

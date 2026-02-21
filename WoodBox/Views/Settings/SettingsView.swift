@@ -59,21 +59,32 @@ struct SettingsView: View {
     #if os(macOS)
       TabView {
         settingsDestination(.snipe)
-          .tabItem { Label(SettingsSection.snipe.title, systemImage: SettingsSection.snipe.systemImage) }
+          .tabItem {
+            Label(SettingsSection.snipe.title, systemImage: SettingsSection.snipe.systemImage)
+          }
 
         settingsDestination(.jamf)
-          .tabItem { Label(SettingsSection.jamf.title, systemImage: SettingsSection.jamf.systemImage) }
+          .tabItem {
+            Label(SettingsSection.jamf.title, systemImage: SettingsSection.jamf.systemImage)
+          }
 
         settingsDestination(.intune)
-          .tabItem { Label(SettingsSection.intune.title, systemImage: SettingsSection.intune.systemImage) }
+          .tabItem {
+            Label(SettingsSection.intune.title, systemImage: SettingsSection.intune.systemImage)
+          }
 
         settingsDestination(.freshservice)
           .tabItem {
-            Label(SettingsSection.freshservice.title, systemImage: SettingsSection.freshservice.systemImage)
+            Label(
+              SettingsSection.freshservice.title,
+              systemImage: SettingsSection.freshservice.systemImage
+            )
           }
 
         settingsDestination(.compnow)
-          .tabItem { Label(SettingsSection.compnow.title, systemImage: SettingsSection.compnow.systemImage) }
+          .tabItem {
+            Label(SettingsSection.compnow.title, systemImage: SettingsSection.compnow.systemImage)
+          }
       }
       .frame(minWidth: 500, minHeight: 400)
       .padding()
@@ -173,7 +184,9 @@ struct SnipeSettingsView: View {
     }
   }
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
+    -> some View
+  {
     HStack {
       Button("Test Connection") { Task { await action() } }
         .disabled(isTesting || disabled)
@@ -265,7 +278,9 @@ struct JamfSettingsView: View {
     }
   }
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
+    -> some View
+  {
     HStack {
       Button("Test Connection") { Task { await action() } }
         .disabled(isTesting || disabled)
@@ -353,7 +368,9 @@ struct IntuneSettingsView: View {
     }
   }
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
+    -> some View
+  {
     HStack {
       Button("Test Connection") { Task { await action() } }
         .disabled(isTesting || disabled)
@@ -431,7 +448,9 @@ struct FreshserviceSettingsView: View {
     }
   }
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
+    -> some View
+  {
     HStack {
       Button("Test Connection") { Task { await action() } }
         .disabled(isTesting || disabled)
@@ -512,7 +531,9 @@ struct CompNowSettingsView: View {
     }
   }
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void) -> some View {
+  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
+    -> some View
+  {
     HStack {
       Button("Test Connection") { Task { await action() } }
         .disabled(isTesting || disabled)

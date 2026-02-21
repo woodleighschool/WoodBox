@@ -13,14 +13,7 @@ import SwiftUI
 final class ModelData {
   // MARK: - Scene + navigation
 
-  #if os(macOS)
-    var preferredColumn: NavigationSplitViewColumn = .detail
-    var selectedOption: NavigationOption? = .repairIntake
-  #else
-    var preferredColumn: NavigationSplitViewColumn = .sidebar
-    var selectedOption: NavigationOption?
-  #endif
-  var isInspectorPresented: Bool = false
+  var selectedTab: AppTab = .repairIntake
 
   // MARK: - Domain state
 

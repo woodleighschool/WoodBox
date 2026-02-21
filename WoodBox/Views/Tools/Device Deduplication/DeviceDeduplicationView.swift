@@ -14,26 +14,18 @@ struct DeviceDeduplicationView: View {
   @Environment(\.modelContext) private var modelContext
   @Environment(ModelData.self) private var modelData
 
-  @Query(sort: \Device.serial) private var allDevices: [Device]
+  @Query(filter: #Predicate<Device> { $0.mdmRecords.count > 1 }, sort: \Device.serial)
+  private var duplicates: [Device]
 
-  @State private var pendingDeletionRecord: MDMRecord?
-  @State private var pendingDeletionDevice: Device?
-  @State private var alertItem: AlertItem?
-  @State private var isProcessing: Bool = false
-
-  // MARK: - Computed Properties
-
-  private var duplicateGroups: [(device: Device, records: [MDMRecord])] {
-    allDevices
-      .filter { $0.mdmRecords.count > 1 }
-      .map { (device: $0, records: $0.mdmRecords) }
-  }
+  @State private var pendingDeletion: (record: MDMRecord, device: Device)?
+  @State private var errorMessage: String?
+  @State private var isProcessing = false
 
   // MARK: - Body
 
   var body: some View {
     Group {
-      if duplicateGroups.isEmpty {
+      if duplicates.isEmpty {
         ContentUnavailableView(
           "No Duplicates",
           systemImage: "checkmark.circle",
@@ -41,34 +33,12 @@ struct DeviceDeduplicationView: View {
         )
       } else {
         List {
-          ForEach(duplicateGroups, id: \.device.serial) { group in
-            DuplicateGroupSection(group: group, settings: modelData.settings) { record in
-              pendingDeletionRecord = record
-              pendingDeletionDevice = group.device
+          ForEach(duplicates, id: \.serial) { device in
+            DuplicateGroupSection(device: device, settings: modelData.settings) { record in
+              pendingDeletion = (record, device)
             }
           }
         }
-      }
-    }
-    .alert(
-      "Confirm Deletion",
-      isPresented: Binding(
-        get: { pendingDeletionRecord != nil },
-        set: { if !$0 { pendingDeletionRecord = nil; pendingDeletionDevice = nil } }
-      )
-    ) {
-      Button("Delete", role: .destructive) {
-        if let record = pendingDeletionRecord, let device = pendingDeletionDevice {
-          Task { await delete(record, from: device) }
-        }
-      }
-      Button("Cancel", role: .cancel) {
-        pendingDeletionRecord = nil
-        pendingDeletionDevice = nil
-      }
-    } message: {
-      if let record = pendingDeletionRecord {
-        Text("Are you sure you want to delete this record from \(record.provider.rawValue)?")
       }
     }
     .overlay {
@@ -79,12 +49,29 @@ struct DeviceDeduplicationView: View {
           .clipShape(RoundedRectangle(cornerRadius: 8))
       }
     }
-    .alert(item: $alertItem) { item in
-      Alert(
-        title: Text(item.title),
-        message: Text(item.message),
-        dismissButton: .default(Text("OK"))
+    .alert(
+      "Confirm Deletion",
+      isPresented: Binding(
+        get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }
       )
+    ) {
+      Button("Delete", role: .destructive) {
+        guard let (record, device) = pendingDeletion else { return }
+        Task { await delete(record, from: device) }
+      }
+      Button("Cancel", role: .cancel) { pendingDeletion = nil }
+    } message: {
+      if let provider = pendingDeletion?.record.provider.rawValue {
+        Text("Are you sure you want to delete this record from \(provider)?")
+      }
+    }
+    .alert(
+      "Error",
+      isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
+    ) {
+      Button("OK") { errorMessage = nil }
+    } message: {
+      Text(errorMessage ?? "")
     }
     .navigationTitle("Device Deduplication")
     .navigationSubtitle("Find and remove duplicate MDM records")
@@ -94,54 +81,51 @@ struct DeviceDeduplicationView: View {
 
   private func delete(_ record: MDMRecord, from device: Device) async {
     isProcessing = true
-    defer { isProcessing = false }
+    defer {
+      isProcessing = false
+      pendingDeletion = nil
+    }
 
     do {
       try await MDMDeletionService.deleteAndRemove(
         record: record,
         from: device,
         jamfClient: modelData.settings.jamfClient,
-        intuneClient: modelData.settings.intuneClient
+        intuneClient: modelData.settings.intuneClient,
+        modelContext: modelContext
       )
-
-      let history = DeviceDeduplicationHistory(
-        deviceSerial: device.serial,
-        assetTag: device.assetTag,
-        removedProvider: record.provider.rawValue
-      )
-      modelContext.insert(history)
-
     } catch {
-      alertItem = AlertItem(title: "Error", message: error.localizedDescription)
+      errorMessage = error.localizedDescription
     }
-
-    pendingDeletionRecord = nil
-    pendingDeletionDevice = nil
   }
 }
 
 // MARK: - Subviews
 
 struct DuplicateGroupSection: View {
-  let group: (device: Device, records: [MDMRecord])
-  @Bindable var settings: AppSettings
+  let device: Device
+  let settings: AppSettings
   let onDelete: (MDMRecord) -> Void
 
-  var body: some View {
-    Section(header: Text("\(group.device.serial) • \(group.device.assetTag)")) {
-      let sorted = group.records.sorted {
-        ($0.lastCheckIn ?? .distantPast) > ($1.lastCheckIn ?? .distantPast)
-      }
-      let latestID = sorted.first?.id
+  private var sortedRecords: [MDMRecord] {
+    device.mdmRecords.sorted {
+      ($0.lastCheckIn ?? .distantPast) > ($1.lastCheckIn ?? .distantPast)
+    }
+  }
 
-      ForEach(sorted, id: \.id) { record in
-        DuplicateRecordRow(
-          record: record,
-          isLatest: record.id == latestID,
-          settings: settings
-        ) {
+  var body: some View {
+    Section {
+      let latestID = sortedRecords.first?.id
+      ForEach(sortedRecords, id: \.id) { record in
+        DuplicateRecordRow(record: record, isLatest: record.id == latestID, settings: settings) {
           onDelete(record)
         }
+      }
+    } header: {
+      HStack(spacing: 8) {
+        Image(systemName: device.symbolName)
+        Label(device.serial, systemImage: "number")
+        Label(device.assetTag, systemImage: "barcode")
       }
     }
   }
@@ -155,84 +139,81 @@ struct DuplicateRecordRow: View {
 
   @Environment(\.openURL) private var openURL
 
-  private let relativeFormatter: RelativeDateTimeFormatter = {
-    let formatter = RelativeDateTimeFormatter()
-    formatter.unitsStyle = .abbreviated
-    return formatter
-  }()
-
   var body: some View {
-    HStack(spacing: 16) {
-      ZStack(alignment: .topTrailing) {
-        Image(record.provider.rawValue.lowercased())
-          .resizable()
-          .scaledToFit()
-          .frame(width: 20, height: 20)
-          .padding(4)
-          .background(.white, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-
-        if isLatest {
-          Circle()
-            .fill(.green)
-            .frame(width: 8, height: 8)
-            .offset(x: 2, y: -2)
-        }
-      }
-
+    Label {
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {
-          Text(record.deviceName ?? "")
+          DeviceNameText(name: record.deviceName)
             .font(.body.weight(.medium))
             .lineLimit(1)
 
           Text("\(record.deviceID)")
             .font(.caption.monospaced())
             .foregroundStyle(.secondary)
+            .lineLimit(1)
         }
 
-        if let lastSeenText {
-          Text(lastSeenText)
-            .font(.caption)
-            .foregroundStyle(.secondary)
+        if let date = record.lastCheckIn {
+          Text(
+            "Last seen \(date.formatted(.relative(presentation: .named, unitsStyle: .abbreviated)))"
+          )
+          .font(.caption)
+          .foregroundStyle(.secondary)
         }
       }
-
-      Spacer()
-
-      Button {
-        if let url = mdmURL { openURL(url) }
-      } label: {
-        Image(systemName: "safari")
-      }
-      .buttonStyle(.borderless)
-      .help("Open device in \(record.provider.rawValue)")
-      .disabled(mdmURL == nil)
-
+    } icon: {
+      Image(record.provider.rawValue.lowercased())
+        .resizable()
+        .scaledToFit()
+        .overlay(alignment: .topTrailing) {
+          if isLatest { PingBadge().offset(x: 2, y: -2) }
+        }
+    }
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       Button(role: .destructive, action: onDelete) {
         Image(systemName: "trash")
       }
-      .buttonStyle(.borderless)
-      .help("Remove this MDM record")
+      if let url = mdmURL {
+        Button {
+          openURL(url)
+        } label: {
+          Image(systemName: "safari")
+        }
+        .tint(.blue)
+      }
     }
-  }
-
-  private var lastSeenText: String? {
-    guard let date = record.lastCheckIn else { return nil }
-    let relative = relativeFormatter.localizedString(for: date, relativeTo: Date())
-    return "Last seen \(relative)"
   }
 
   private var mdmURL: URL? {
     switch record.provider {
     case .intune:
       return URL(
-        string: "https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/\(record.deviceID)"
+        string:
+        "https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/\(record.deviceID)"
       )
     case .jamf:
       let endpoint = record.jamfDeviceType == .mobile ? "mobileDevices.html" : "computers.html"
-      let urlString = "\(settings.jamfBaseURL)/\(endpoint)?id=\(record.deviceID)"
-
-      return URL(string: urlString)
+      return URL(string: "\(settings.jamfBaseURL)/\(endpoint)?id=\(record.deviceID)")
     }
+  }
+}
+
+struct PingBadge: View {
+  @State private var isAnimating = false
+
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(.green.opacity(0.35))
+        .frame(width: 10, height: 10)
+        .scaleEffect(isAnimating ? 2.2 : 1.0)
+        .opacity(isAnimating ? 0 : 1)
+        .animation(.easeOut(duration: 1.2).repeatForever(autoreverses: false), value: isAnimating)
+
+      Circle()
+        .fill(.green)
+        .frame(width: 10, height: 10)
+    }
+    .onAppear { isAnimating = true }
   }
 }

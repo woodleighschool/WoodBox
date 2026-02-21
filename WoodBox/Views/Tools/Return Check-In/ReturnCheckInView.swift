@@ -49,22 +49,32 @@ struct ReturnCheckInView: View {
   var body: some View {
     Form {
       Section("Device") {
-        DeviceSummaryCard(device: deviceSelection.selectedDevice, onClear: deviceSelection.clear)
+        DeviceSummaryCard(
+          device: deviceSelection.selectedDevice,
+          onClear: deviceSelection.clear
+        )
       }
 
-      Section("Checklist") {
+      Section {
         Toggle("Good Condition", isOn: $goodCondition)
         Toggle("Has Charger", isOn: $hasCharger)
-        TextField("Notes", text: $notes, prompt: Text("Missing some keys, will be $149 to be fixed..."), axis: .vertical)
-          .lineLimit(3 ... 6)
+        TextField(
+          "Notes", text: $notes, prompt: Text("Missing some keys, will be $149 to be fixed..."),
+          axis: .vertical
+        )
+        .lineLimit(3 ... 6)
+      } header: {
+        Label("Details", systemImage: "pencil")
       }
 
-      Section("End User") {
+      Section {
         TextField("Name", text: $endUserName)
         TextField("Email", text: $endUserEmail)
+      } header: {
+        Label("End User", systemImage: "person.crop.circle")
       }
 
-      Section("Automation") {
+      Section {
         if !activeProviders.isEmpty {
           Toggle(isOn: $deleteInMDM) {
             Label {
@@ -83,8 +93,6 @@ struct ReturnCheckInView: View {
             Image("snipeit")
               .resizable()
               .scaledToFit()
-              .padding(4)
-              .background(.white, in: .rect(cornerRadius: 6))
           }
         }
         .disabled(!modelData.settings.snipeIsEnabled)
@@ -96,28 +104,32 @@ struct ReturnCheckInView: View {
             Image("freshservice")
               .resizable()
               .scaledToFit()
-              .padding(4)
-              .background(.white, in: .rect(cornerRadius: 6))
           }
         }
         .disabled(!modelData.settings.freshserviceIsEnabled)
+      } header: {
+        Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
       }
-
-      Button {
-        if deleteInMDM, !activeProviders.isEmpty {
-          showDeleteConfirmation = true
-        } else {
-          Task { await submit() }
-        }
-      } label: {
-        Text("Process Return")
-          .frame(maxWidth: .infinity)
-      }
-      .disabled(deviceSelection.selectedDevice == nil || isSubmitting)
-      .buttonStyle(.borderedProminent)
     }
     .formStyle(.grouped)
     .deviceSearch(selection: deviceSelection)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        if isSubmitting {
+          ProgressView().controlSize(.small)
+        } else {
+          Button("Submit") {
+            if deleteInMDM, !activeProviders.isEmpty {
+              showDeleteConfirmation = true
+            } else {
+              Task { await submit() }
+            }
+          }
+          .disabled(deviceSelection.selectedDevice == nil)
+          .buttonStyle(.borderedProminent)
+        }
+      }
+    }
     .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
       if let newDevice = deviceSelection.selectedDevice {
         endUserName = newDevice.assignedUserName ?? ""
@@ -149,8 +161,6 @@ struct ReturnCheckInView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("Return Check-In")
-    .navigationSubtitle("Process returned devices")
   }
 
   // MARK: - Private Helpers
@@ -168,12 +178,15 @@ struct ReturnCheckInView: View {
             record: record,
             from: device,
             jamfClient: modelData.settings.jamfClient,
-            intuneClient: modelData.settings.intuneClient
+            intuneClient: modelData.settings.intuneClient,
+            modelContext: modelContext
           )
         }
       }
 
-      if updateSnipeStatus, let assetID = device.snipeID, let snipeClient = modelData.settings.snipeClient {
+      if updateSnipeStatus, let assetID = device.snipeID,
+         let snipeClient = modelData.settings.snipeClient
+      {
         try await snipeClient.checkinSnipeAsset(
           assetID: assetID,
           statusID: modelData.settings.snipeDeployableStatusID,
@@ -181,7 +194,6 @@ struct ReturnCheckInView: View {
         )
       }
 
-      var ticketID: String?
       if createFreshserviceRequest, let fsClient = modelData.settings.freshserviceClient {
         let customFields: FreshserviceCustomFields = [
           "computer_returned_in_good_condition": .string(goodCondition ? "Yes" : "No"),
@@ -189,7 +201,7 @@ struct ReturnCheckInView: View {
           "notes": .string(notes),
         ]
 
-        ticketID = try await fsClient.createFreshserviceServiceRequest(
+        _ = try await fsClient.createFreshserviceServiceRequest(
           serviceItemDisplayID: modelData.settings.freshserviceReturnedMachineServiceItemID,
           email: endUserEmail,
           quantity: 1,
@@ -197,18 +209,6 @@ struct ReturnCheckInView: View {
           workspaceID: modelData.settings.freshserviceWorkspaceID
         )
       }
-
-      let history = ReturnCheckInHistory(
-        timestamp: Date(),
-        deviceSerial: device.serial,
-        assetTag: device.assetTag,
-        goodCondition: goodCondition,
-        hasCharger: hasCharger,
-        notes: notes,
-        freshserviceTicketID: ticketID,
-        assignedUser: endUserName
-      )
-      modelContext.insert(history)
 
       resetForm()
 

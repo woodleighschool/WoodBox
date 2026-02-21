@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftData
 
 enum MDMDeletionService {
   static func delete(
@@ -38,13 +39,14 @@ enum MDMDeletionService {
     record: MDMRecord,
     from device: Device,
     jamfClient: JamfClient?,
-    intuneClient: IntuneClient?
+    intuneClient: IntuneClient?,
+    modelContext: ModelContext?
   ) async throws {
     try await delete(record: record, jamfClient: jamfClient, intuneClient: intuneClient)
 
-    // Remove from local model
-    if let index = device.mdmRecords.firstIndex(where: { $0.id == record.id }) {
-      device.mdmRecords.remove(at: index)
-    }
+    // Remove from local model and delete the record entity
+    let updated = device.mdmRecords.filter { $0.id != record.id }
+    device.mdmRecords = updated
+    modelContext?.delete(record)
   }
 }

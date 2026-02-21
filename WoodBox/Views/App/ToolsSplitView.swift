@@ -13,107 +13,82 @@ struct ToolsSplitView: View {
 
   @Environment(ModelData.self) private var modelData
 
-  private var selection: Binding<NavigationOption?> {
-    Binding(
-      get: { modelData.selectedOption },
-      set: { modelData.selectedOption = $0 }
-    )
-  }
-
-  private var resolvedSelection: NavigationOption? {
-    #if os(macOS)
-      modelData.selectedOption ?? .repairIntake
-    #else
-      modelData.selectedOption
-    #endif
-  }
-
   // MARK: - Body
 
   var body: some View {
     @Bindable var modelData = modelData
 
-    NavigationSplitView(preferredCompactColumn: $modelData.preferredColumn) {
-      SidebarList(selection: selection)
-    } detail: {
-      if let option = resolvedSelection {
-        DetailPane(option: option, modelData: modelData, isInspectorPresented: $modelData.isInspectorPresented)
-      }
-    }
-    .modifier(HistoryInspectorToggle(selectedOption: resolvedSelection, isInspectorPresented: $modelData.isInspectorPresented))
-  }
-}
-
-private struct DetailPane: View {
-  let option: NavigationOption
-  let modelData: ModelData
-  @Binding var isInspectorPresented: Bool
-
-  var body: some View {
-    NavigationStack {
-      option.view(modelData: modelData)
-        .toolbar {
-          if option != .settings {
-            ToolbarItem(placement: .primaryAction) {
-              Button {
-                isInspectorPresented.toggle()
-              } label: {
-                Label("History", systemImage: "clock.arrow.circlepath")
-              }
-            }
-          }
-        }
-    }
-    .id(option)
-  }
-}
-
-private struct SidebarList: View {
-  var selection: Binding<NavigationOption?>
-
-  var body: some View {
-    List(selection: selection) {
-      Section("Tools") {
-        ForEach(NavigationOption.mainPages) { option in
-          Label(option.name, systemImage: option.symbolName)
-            .tag(option)
+    TabView(selection: $modelData.selectedTab) {
+      // Primary tabs
+      Tab(
+        AppTab.repairIntake.title, systemImage: AppTab.repairIntake.symbol,
+        value: AppTab.repairIntake
+      ) {
+        NavigationStack {
+          RepairIntakeView(deviceSelection: modelData.deviceSelection)
+            .navigationTitle("Repair Intake")
+            .navigationSubtitle("Log repairs and generate tickets")
         }
       }
+
+      Tab(
+        AppTab.returnCheckIn.title, systemImage: AppTab.returnCheckIn.symbol,
+        value: AppTab.returnCheckIn
+      ) {
+        NavigationStack {
+          ReturnCheckInView(deviceSelection: modelData.deviceSelection)
+            .navigationTitle("Return Check-In")
+            .navigationSubtitle("Process returned devices")
+        }
+      }
+
+      Tab(
+        AppTab.salePreparation.title,
+        systemImage: AppTab.salePreparation.symbol,
+        value: AppTab.salePreparation
+      ) {
+        NavigationStack {
+          SalePreparationView(deviceSelection: modelData.deviceSelection)
+            .navigationTitle("Sale Preparation")
+            .navigationSubtitle("Prepare devices for sale")
+        }
+      }
+
+      Tab(
+        AppTab.deviceDeduplication.title,
+        systemImage: AppTab.deviceDeduplication.symbol,
+        value: AppTab.deviceDeduplication
+      ) {
+        NavigationStack {
+          DeviceDeduplicationView()
+            .navigationTitle("Device Deduplication")
+            .navigationSubtitle("Merge duplicate records")
+        }
+      }
+
       #if os(iOS)
-        Section("Preferences") {
-          Label(NavigationOption.settings.name, systemImage: NavigationOption.settings.symbolName)
-            .tag(NavigationOption.settings)
+        Tab(
+          AppTab.settings.title, systemImage: AppTab.settings.symbol, value: AppTab.settings
+        ) {
+          NavigationStack {
+            SettingsView()
+              .navigationTitle("Settings")
+              .toolbar {
+                ToolbarItem(placement: .automatic) {
+                  CacheRefreshButton()
+                }
+              }
+          }
         }
       #endif
     }
-    .listStyle(.sidebar)
-    .navigationTitle("WoodBox")
-    .toolbar {
-      ToolbarItem(placement: .automatic) {
-        CacheRefreshButton()
-      }
-    }
+    .tabViewStyle(.sidebarAdaptable)
     #if os(macOS)
-    .frame(minWidth: 180)
-    #endif
-  }
-}
-
-// MARK: - Modifiers
-
-private struct HistoryInspectorToggle: ViewModifier {
-  let selectedOption: NavigationOption?
-  @Binding var isInspectorPresented: Bool
-
-  func body(content: Content) -> some View {
-    content
-      .inspector(isPresented: $isInspectorPresented) {
-        if let option = selectedOption {
-          HistoryInspectorView(option: option)
-          #if os(macOS)
-            .inspectorColumnWidth(min: 250, ideal: 250, max: 250)
-          #endif
+      .toolbar {
+        ToolbarItem(placement: .automatic) {
+          CacheRefreshButton()
         }
       }
+    #endif
   }
 }

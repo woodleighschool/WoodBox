@@ -65,7 +65,9 @@ struct FreshserviceClient: Sendable {
     customFields: FreshserviceCustomFields = [:],
     workspaceID: Int? = nil
   ) async throws -> String {
-    let url = baseURL.appending(path: "api/v2/service_catalog/items/\(serviceItemDisplayID)/place_request")
+    let url = baseURL.appending(
+      path: "api/v2/service_catalog/items/\(serviceItemDisplayID)/place_request"
+    )
     var request = authorizedRequest(url: url, method: "POST")
 
     let payload = FreshserviceServiceRequest(

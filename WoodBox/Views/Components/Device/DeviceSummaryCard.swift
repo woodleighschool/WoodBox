@@ -17,91 +17,120 @@ struct DeviceSummaryCard: View {
   // MARK: - Body
 
   var body: some View {
-    Group {
-      if let device {
-        deviceView(for: device)
-      } else {
-        emptyStateView
+    HStack(spacing: 12) {
+      iconBadge
+
+      VStack(alignment: .leading, spacing: 4) {
+        if let device {
+          titleBlock(device)
+          metadata(device)
+        } else {
+          emptyBlock
+        }
+      }
+
+      Spacer(minLength: 0)
+
+      if let onClear, device != nil {
+        Button(action: onClear) {
+          Image(systemName: "xmark.circle.fill")
+            .symbolRenderingMode(.hierarchical)
+        }
       }
     }
-    .padding(.vertical, 4)
   }
 
   // MARK: - Private Helpers
 
-  private func deviceView(for device: Device) -> some View {
-    HStack(alignment: .center, spacing: 12) {
-      Image(systemName: "laptopcomputer")
-        .font(.title2)
-        .foregroundStyle(.white)
-        .frame(width: 40, height: 40)
-        .background(Color.accentColor.gradient, in: .rect(cornerRadius: 8))
-
-      VStack(alignment: .leading, spacing: 2) {
-        identifiersRow(for: device)
-        metadataRow(for: device)
-      }
-
-      Spacer()
-
-      if let onClear {
-        Button(action: onClear) {
-          Image(systemName: "xmark.circle.fill")
-            .font(.title3)
-            .foregroundStyle(.tertiary)
-        }
-        .buttonStyle(.plain)
-        .padding(.leading, 8)
-      }
-    }
+  @ViewBuilder
+  private var iconBadge: some View {
+    let isPopulated = device != nil
+    Image(systemName: device?.symbolName ?? "macbook.and.iphone")
+      .font(.title3.weight(.semibold))
+      .foregroundStyle(isPopulated ? .white : .secondary)
+      .frame(width: 40, height: 40)
+      .background(
+        isPopulated ? Color.accentColor : Color.secondary.opacity(0.15),
+        in: .rect(cornerRadius: 12)
+      )
+      .symbolRenderingMode(.hierarchical)
   }
 
-  private func identifiersRow(for device: Device) -> some View {
-    HStack(spacing: 8) {
-      if let name = device.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
-        Text(name)
-          .font(.headline)
-          .foregroundStyle(.primary)
-      }
+  private func titleBlock(_ device: Device) -> some View {
+    VStack(alignment: .leading, spacing: 2) {
+      DeviceNameText(name: device.name)
+        .font(.headline)
+        .lineLimit(1)
 
-      Label(device.assetTag, systemImage: "tag.fill")
-      Label(device.serial, systemImage: "number")
-    }
-    .font(.subheadline)
-    .foregroundStyle(.secondary)
-    .lineLimit(1)
-  }
-
-  private func metadataRow(for device: Device) -> some View {
-    HStack(spacing: 8) {
-      if let model = device.model?.trimmingCharacters(in: .whitespacesAndNewlines), !model.isEmpty {
-        Label(model, systemImage: "desktopcomputer")
-      }
-    }
-    .font(.caption)
-    .foregroundStyle(.secondary)
-    .lineLimit(1)
-  }
-
-  private var emptyStateView: some View {
-    HStack(alignment: .center, spacing: 12) {
-      Image(systemName: "macbook.and.iphone")
-        .font(.title2)
+      Text(device.model)
+        .font(.subheadline)
         .foregroundStyle(.secondary)
-        .frame(width: 40, height: 40)
-        .background(.tertiary.opacity(0.3), in: .rect(cornerRadius: 8))
-
-      VStack(alignment: .leading, spacing: 2) {
-        Text("No Device Selected")
-          .font(.headline)
-          .foregroundStyle(.secondary)
-
-        Text("Search for a device to begin.")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-      }
-
-      Spacer()
+        .lineLimit(1)
     }
+  }
+
+  private var emptyBlock: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text("No Device Selected")
+        .font(.headline)
+        .foregroundStyle(.secondary)
+
+      Text("Search for a device to begin.")
+        .font(.subheadline)
+        .foregroundStyle(.secondary)
+    }
+  }
+
+  private func metadata(_ device: Device) -> some View {
+    ScrollView(.horizontal) {
+      HStack(spacing: 6) {
+        chip(systemImage: "barcode", text: device.assetTag)
+        chip(systemImage: "number", text: device.serial)
+        warrantyChip(device.warrantyExpires)
+      }
+    }
+    .scrollIndicators(.never)
+    .scrollBounceBehavior(.basedOnSize)
+  }
+
+  @ViewBuilder
+  private func chip(systemImage: String, text: String) -> some View {
+    if !text.isEmpty {
+      HStack(spacing: 3) {
+        Image(systemName: systemImage)
+        Text(text)
+      }
+      .font(.caption.monospacedDigit())
+      .lineLimit(1)
+      .foregroundStyle(.secondary)
+      .padding(.vertical, 4)
+      .padding(.horizontal, 8)
+      .background(.secondary.opacity(0.12), in: .capsule)
+    }
+  }
+
+  private func warrantyChip(_ date: Date?) -> some View {
+    let oneMonth: TimeInterval = 60 * 60 * 24 * 30
+    let now = Date()
+
+    let (label, tint): (String, Color) = {
+      guard let date else { return ("Unknown", .secondary) }
+      let interval = date.timeIntervalSince(now)
+      let text = date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits))
+      if interval > oneMonth { return (text, .green) }
+      if interval < -oneMonth { return (text, .red) }
+      return (text, .secondary)
+    }()
+
+    return HStack(spacing: 3) {
+      Image(systemName: "shield")
+      Text(label)
+    }
+    .font(.caption.monospacedDigit())
+    .lineLimit(1)
+    .foregroundStyle(tint)
+    .padding(.vertical, 4)
+    .padding(.horizontal, 8)
+    .background(.secondary.opacity(0.12), in: .capsule)
   }
 }

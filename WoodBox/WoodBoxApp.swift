@@ -12,10 +12,7 @@ import SwiftUI
 struct WoodBoxApp: App {
   private let modelTypes: [any PersistentModel.Type] = [
     Device.self,
-    RepairHistory.self,
-    ReturnCheckInHistory.self,
-    SalePreparationHistory.self,
-    DeviceDeduplicationHistory.self,
+    MDMRecord.self,
   ]
 
   private let container: ModelContainer

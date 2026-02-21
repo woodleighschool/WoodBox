@@ -46,10 +46,13 @@ struct SalePreparationView: View {
   var body: some View {
     Form {
       Section("Device") {
-        DeviceSummaryCard(device: deviceSelection.selectedDevice, onClear: deviceSelection.clear)
+        DeviceSummaryCard(
+          device: deviceSelection.selectedDevice,
+          onClear: deviceSelection.clear
+        )
       }
 
-      Section("Condition") {
+      Section {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
           Picker("Condition Grade", selection: $condition) {
             ForEach(DeviceCondition.allCases, id: \.self) { condition in
@@ -70,21 +73,25 @@ struct SalePreparationView: View {
             VStack(alignment: .leading, spacing: 8) {
               Text("Grade Guide")
                 .font(.headline)
-              gradeRow(label: "A", detail: "Like new, no visible wear, fully functional")
-              gradeRow(label: "B", detail: "Minor cosmetic marks, fully functional")
-              gradeRow(label: "C", detail: "Noticeable wear or scratches, fully functional")
-              gradeRow(label: "D", detail: "Significant damage or defects, may have issues")
+              ForEach(DeviceCondition.allCases, id: \.self) { condition in
+                gradeRow(condition)
+              }
             }
             .padding()
             .frame(minWidth: 260)
+            .presentationCompactAdaptation(.popover)
           }
         }
 
-        TextField("Notes", text: $notes, prompt: Text("Broken chinbar, missing some keys."), axis: .vertical)
-          .lineLimit(3 ... 6)
+        TextField(
+          "Notes", text: $notes, prompt: Text("Broken chinbar, missing some keys."), axis: .vertical
+        )
+        .lineLimit(3 ... 6)
+      } header: {
+        Label("Details", systemImage: "pencil")
       }
 
-      Section("Automation") {
+      Section {
         Toggle(isOn: snipeToggle) {
           Label {
             Text("Update Snipe-IT Status")
@@ -92,8 +99,6 @@ struct SalePreparationView: View {
             Image("snipeit")
               .resizable()
               .scaledToFit()
-              .padding(4)
-              .background(.white, in: .rect(cornerRadius: 6))
           }
         }
         .disabled(!modelData.settings.snipeIsEnabled)
@@ -108,23 +113,29 @@ struct SalePreparationView: View {
             }
           }
         }
+      } header: {
+        Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
       }
-
-      Button {
-        if deleteInMDM, !activeProviders.isEmpty {
-          showDeleteConfirmation = true
-        } else {
-          Task { await submit() }
-        }
-      } label: {
-        Text("Process for Sale")
-          .frame(maxWidth: .infinity)
-      }
-      .disabled(deviceSelection.selectedDevice == nil || isSubmitting)
-      .buttonStyle(.borderedProminent)
     }
     .formStyle(.grouped)
     .deviceSearch(selection: deviceSelection)
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        if isSubmitting {
+          ProgressView().controlSize(.small)
+        } else {
+          Button("Submit") {
+            if deleteInMDM, !activeProviders.isEmpty {
+              showDeleteConfirmation = true
+            } else {
+              Task { await submit() }
+            }
+          }
+          .disabled(deviceSelection.selectedDevice == nil)
+          .buttonStyle(.borderedProminent)
+        }
+      }
+    }
     .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
       Button("Delete", role: .destructive) {
         Task { await submit() }
@@ -140,8 +151,6 @@ struct SalePreparationView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .navigationTitle("Sale Preparation")
-    .navigationSubtitle("Prepare devices for sale")
     .onChange(of: modelData.settings.snipeIsEnabled) { _, isEnabled in
       if !isEnabled { updateSnipeStatus = false }
     }
@@ -165,12 +174,15 @@ struct SalePreparationView: View {
             record: record,
             from: device,
             jamfClient: modelData.settings.jamfClient,
-            intuneClient: modelData.settings.intuneClient
+            intuneClient: modelData.settings.intuneClient,
+            modelContext: modelContext
           )
         }
       }
 
-      if updateSnipeStatus, let assetID = device.snipeID, let snipeClient = modelData.settings.snipeClient {
+      if updateSnipeStatus, let assetID = device.snipeID,
+         let snipeClient = modelData.settings.snipeClient
+      {
         try await snipeClient.checkinSnipeAsset(
           assetID: assetID,
           statusID: modelData.settings.snipeForSaleStatusID,
@@ -178,15 +190,6 @@ struct SalePreparationView: View {
         )
       }
 
-      let history = SalePreparationHistory(
-        deviceSerial: device.serial,
-        assetTag: device.assetTag,
-        model: device.model ?? "Unknown",
-        condition: condition,
-        notes: notes
-      )
-
-      modelContext.insert(history)
       resetForm()
 
     } catch {
@@ -220,12 +223,12 @@ struct SalePreparationView: View {
     )
   }
 
-  private func gradeRow(label: String, detail: String) -> some View {
+  private func gradeRow(_ condition: DeviceCondition) -> some View {
     HStack(alignment: .top, spacing: 8) {
-      Text(label)
+      Text(condition.rawValue)
         .font(.headline)
         .frame(width: 18, alignment: .leading)
-      Text(detail)
+      Text(condition.detail)
         .font(.subheadline)
         .foregroundStyle(.secondary)
     }
