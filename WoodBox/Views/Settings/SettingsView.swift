@@ -96,6 +96,7 @@ struct SettingsView: View {
         } label: {
           Label(section.title, systemImage: section.systemImage)
         }
+        .contentTransition(.symbolEffect(.replace))
       }
       .navigationTitle("Settings")
     #endif

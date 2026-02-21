@@ -51,8 +51,12 @@ import SwiftUI
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .padding(.horizontal)
-                .shadow(radius: 4)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial, in: .capsule)
+                .shadow(radius: 6)
+                .transition(.scale.combined(with: .opacity))
+                .contentTransition(.opacity)
             }
           }
           .containerRelativeFrame(.vertical) { height, _ in height * 0.48 }
@@ -67,6 +71,7 @@ import SwiftUI
             .background(.background)
         }
         .ignoresSafeArea(edges: .top)
+        .animation(.snappy(duration: 0.22, extraBounce: 0.08), value: matchedValue)
         .toolbar {
           ToolbarItem(placement: .cancellationAction) {
             Button(action: { dismiss() }) {

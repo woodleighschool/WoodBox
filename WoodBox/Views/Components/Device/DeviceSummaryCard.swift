@@ -28,16 +28,22 @@ struct DeviceSummaryCard: View {
           emptyBlock
         }
       }
+      .contentTransition(.opacity)
 
       Spacer(minLength: 0)
 
       if let onClear, device != nil {
         Button(action: onClear) {
           Image(systemName: "xmark.circle.fill")
+            .font(.title3)
             .symbolRenderingMode(.hierarchical)
         }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
       }
     }
+    .animation(.smooth(duration: 0.2), value: device?.assetTag)
   }
 
   // MARK: - Private Helpers
@@ -54,6 +60,7 @@ struct DeviceSummaryCard: View {
         in: .rect(cornerRadius: 12)
       )
       .symbolRenderingMode(.hierarchical)
+      .symbolEffect(.bounce, value: device?.serial)
   }
 
   private func titleBlock(_ device: Device) -> some View {
@@ -86,11 +93,12 @@ struct DeviceSummaryCard: View {
       HStack(spacing: 6) {
         chip(systemImage: "barcode", text: device.assetTag)
         chip(systemImage: "number", text: device.serial)
-        warrantyChip(device.warrantyExpires)
+        if let expires = device.warrantyExpires { warrantyChip(expires) }
       }
     }
     .scrollIndicators(.never)
     .scrollBounceBehavior(.basedOnSize)
+    .contentTransition(.opacity)
   }
 
   @ViewBuilder
@@ -109,22 +117,16 @@ struct DeviceSummaryCard: View {
     }
   }
 
-  private func warrantyChip(_ date: Date?) -> some View {
+  private func warrantyChip(_ date: Date) -> some View {
     let oneMonth: TimeInterval = 60 * 60 * 24 * 30
     let now = Date()
-
-    let (label, tint): (String, Color) = {
-      guard let date else { return ("Unknown", .secondary) }
-      let interval = date.timeIntervalSince(now)
-      let text = date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits))
-      if interval > oneMonth { return (text, .green) }
-      if interval < -oneMonth { return (text, .red) }
-      return (text, .secondary)
-    }()
+    let interval = date.timeIntervalSince(now)
+    let text = date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits))
+    let tint: Color = interval > oneMonth ? .green : interval < -oneMonth ? .red : .secondary
 
     return HStack(spacing: 3) {
       Image(systemName: "shield")
-      Text(label)
+      Text(text)
     }
     .font(.caption.monospacedDigit())
     .lineLimit(1)

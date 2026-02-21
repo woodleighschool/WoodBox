@@ -87,6 +87,7 @@ struct RepairIntakeView: View {
     }
     .deviceSearch(selection: deviceSelection)
     .formStyle(.grouped)
+    .scrollDismissesKeyboard(.interactively)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if isSubmitting {
@@ -137,6 +138,7 @@ struct RepairIntakeView: View {
       var compNowTicketID: String?
 
       if createCompNowTicket, let client = modelData.settings.compNowClient {
+        // Create CompNow ticket
         let ticket = CompNowTicket(
           endUser: endUserName,
           product: device.model,
@@ -160,9 +162,11 @@ struct RepairIntakeView: View {
       }
 
       if createFreshserviceTicket, let client = modelData.settings.freshserviceClient {
+        // Create Freshservice ticket
         var customFields: FreshserviceCustomFields = ["print_label": .bool(true)]
         if let spare = selectedSpare {
-          customFields["student_spare"] = .string(spare.assetTag)
+          // Safe: spare picker enforces non-empty name
+          customFields["student_spare"] = .string(spare.name!)
         }
         if let cnTicket = compNowTicketID {
           customFields["compnow_ticket_no"] = .string(cnTicket)
@@ -244,7 +248,7 @@ private struct SparePicker: View {
     Picker("Spare Device", selection: $selection) {
       Text("None").tag(nil as Device?)
       ForEach(spareDevices) { spare in
-        Text(spare.name ?? spare.assetTag).tag(spare as Device?)
+        Text(spare.name ?? "").tag(spare as Device?)
       }
     }
   }

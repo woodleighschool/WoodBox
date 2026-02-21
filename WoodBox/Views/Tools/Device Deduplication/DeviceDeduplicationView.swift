@@ -37,6 +37,7 @@ struct DeviceDeduplicationView: View {
             DuplicateGroupSection(device: device, settings: modelData.settings) { record in
               pendingDeletion = (record, device)
             }
+            .contentTransition(.symbolEffect(.replace))
           }
         }
       }
@@ -120,6 +121,7 @@ struct DuplicateGroupSection: View {
         DuplicateRecordRow(record: record, isLatest: record.id == latestID, settings: settings) {
           onDelete(record)
         }
+        .contentTransition(.opacity)
       }
     } header: {
       HStack(spacing: 8) {
@@ -140,7 +142,16 @@ struct DuplicateRecordRow: View {
   @Environment(\.openURL) private var openURL
 
   var body: some View {
-    Label {
+    HStack(spacing: 16) {
+      ZStack(alignment: .topTrailing) {
+        Image(record.provider.rawValue.lowercased())
+          .resizable()
+          .scaledToFit()
+          .frame(width: 24, height: 24)
+
+        if isLatest { PingBadge().offset(x: 2, y: -2) }
+      }
+
       VStack(alignment: .leading, spacing: 4) {
         HStack(spacing: 6) {
           DeviceNameText(name: record.deviceName)
@@ -161,13 +172,6 @@ struct DuplicateRecordRow: View {
           .foregroundStyle(.secondary)
         }
       }
-    } icon: {
-      Image(record.provider.rawValue.lowercased())
-        .resizable()
-        .scaledToFit()
-        .overlay(alignment: .topTrailing) {
-          if isLatest { PingBadge().offset(x: 2, y: -2) }
-        }
     }
     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
       Button(role: .destructive, action: onDelete) {

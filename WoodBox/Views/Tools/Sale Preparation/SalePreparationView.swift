@@ -119,6 +119,10 @@ struct SalePreparationView: View {
     }
     .formStyle(.grouped)
     .deviceSearch(selection: deviceSelection)
+    .animation(
+      .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
+    )
+    .scrollDismissesKeyboard(.interactively)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if isSubmitting {
@@ -169,6 +173,7 @@ struct SalePreparationView: View {
 
     do {
       if deleteInMDM {
+        // Remove device from MDM provider(s)
         if let record = device.mdmRecords.first {
           try await MDMDeletionService.deleteAndRemove(
             record: record,
@@ -183,6 +188,7 @@ struct SalePreparationView: View {
       if updateSnipeStatus, let assetID = device.snipeID,
          let snipeClient = modelData.settings.snipeClient
       {
+        // Update Snipe-IT status for sale
         try await snipeClient.checkinSnipeAsset(
           assetID: assetID,
           statusID: modelData.settings.snipeForSaleStatusID,
@@ -234,3 +240,5 @@ struct SalePreparationView: View {
     }
   }
 }
+
+// MARK: - Focus fields

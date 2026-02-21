@@ -113,6 +113,10 @@ struct ReturnCheckInView: View {
     }
     .formStyle(.grouped)
     .deviceSearch(selection: deviceSelection)
+    .animation(
+      .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
+    )
+    .scrollDismissesKeyboard(.interactively)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         if isSubmitting {
@@ -173,6 +177,7 @@ struct ReturnCheckInView: View {
 
     do {
       if deleteInMDM {
+        // Remove device from MDM provider(s)
         if let record = device.mdmRecords.first {
           try await MDMDeletionService.deleteAndRemove(
             record: record,
@@ -187,6 +192,7 @@ struct ReturnCheckInView: View {
       if updateSnipeStatus, let assetID = device.snipeID,
          let snipeClient = modelData.settings.snipeClient
       {
+        // Update Snipe-IT status
         try await snipeClient.checkinSnipeAsset(
           assetID: assetID,
           statusID: modelData.settings.snipeDeployableStatusID,
@@ -195,6 +201,7 @@ struct ReturnCheckInView: View {
       }
 
       if createFreshserviceRequest, let fsClient = modelData.settings.freshserviceClient {
+        // Create Freshservice return request
         let customFields: FreshserviceCustomFields = [
           "computer_returned_in_good_condition": .string(goodCondition ? "Yes" : "No"),
           "returned_with_working_charger": .string(hasCharger ? "Yes" : "No"),

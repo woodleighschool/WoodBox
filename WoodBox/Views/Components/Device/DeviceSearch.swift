@@ -34,6 +34,7 @@ private struct DeviceSearchBody<Content: View>: View {
   @Query private var filteredDevices: [Device]
 
   @Environment(\.dismissSearch) private var dismissSearch
+  @State private var isSearchPresented = false
 
   #if os(iOS)
     @State private var isScanningDevice = false
@@ -58,12 +59,19 @@ private struct DeviceSearchBody<Content: View>: View {
   var body: some View {
     let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
     content
-      .searchable(text: $selection.query, prompt: "Pick a Device...")
+      .searchable(
+        text: $selection.query,
+        isPresented: $isSearchPresented,
+        prompt: "Pick a Device..."
+      )
+      .contentTransition(.symbolEffect(.replace))
+      .animation(.smooth(duration: 0.18), value: selection.selectedDevice?.serial)
       .searchSuggestions {
         if !q.isEmpty {
           ForEach(filteredDevices) { device in
             Button {
               selection.select(device)
+              isSearchPresented = false
               dismissSearch()
             } label: {
               HStack(alignment: .center, spacing: 10) {
@@ -71,6 +79,7 @@ private struct DeviceSearchBody<Content: View>: View {
                   .resizable()
                   .scaledToFit()
                   .frame(width: 24, height: 24)
+                  .symbolEffect(.bounce, value: selection.selectedDevice?.serial == device.serial)
                 VStack(alignment: .leading, spacing: 2) {
                   DeviceNameText(name: device.name)
                   HStack(spacing: 4) {
@@ -90,6 +99,7 @@ private struct DeviceSearchBody<Content: View>: View {
       .onSubmit(of: .search) {
         guard !q.isEmpty, let firstMatch = filteredDevices.first else { return }
         selection.select(firstMatch)
+        isSearchPresented = false
         dismissSearch()
       }
     #if os(iOS)
@@ -97,6 +107,7 @@ private struct DeviceSearchBody<Content: View>: View {
         DeviceScannerSheet(selection: selection)
       }
       .toolbar {
+        // I do want this next to the search field, does not seem achievable...?
         ToolbarItem(placement: .topBarTrailing) {
           Button {
             isScanningDevice = true
