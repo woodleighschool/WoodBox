@@ -20,14 +20,20 @@ enum AppTab: Hashable, Identifiable {
 
   var title: String {
     #if os(iOS)
-      return ""
+      switch self {
+      case .repairIntake: return "Repair"
+      case .returnCheckIn: return "Return"
+      case .salePreparation: return "Sale"
+      case .deviceDeduplication: return "Dedupe"
+      case .settings: return "Settings" // Unused on macOS
+      }
     #else
       switch self {
       case .repairIntake: return "Repair Intake"
       case .returnCheckIn: return "Return Check-In"
       case .salePreparation: return "Sale Preparation"
       case .deviceDeduplication: return "Device Deduplication"
-      case .settings: return "Settings"
+      case .settings: return "Settings" // Unused on macOS
       }
     #endif
   }

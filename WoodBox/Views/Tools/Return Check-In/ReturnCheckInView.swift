@@ -16,17 +16,17 @@ struct ReturnCheckInView: View {
 
   @Bindable var deviceSelection: DeviceSelectionState
 
-  @State private var endUserName: String = ""
-  @State private var endUserEmail: String = ""
-  @State private var goodCondition: Bool = true
-  @State private var hasCharger: Bool = true
-  @State private var deleteInMDM: Bool = false
-  @State private var updateSnipeStatus: Bool = true
-  @State private var createFreshserviceRequest: Bool = true
-  @State private var notes: String = ""
-  @State private var isSubmitting: Bool = false
+  @State private var endUserName = ""
+  @State private var endUserEmail = ""
+  @State private var goodCondition = true
+  @State private var hasCharger = true
+  @State private var deleteInMDM = false
+  @State private var updateSnipeStatus = true
+  @State private var createFreshserviceRequest = true
+  @State private var notes = ""
+  @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
-  @State private var showDeleteConfirmation: Bool = false
+  @State private var showDeleteConfirmation = false
 
   // MARK: - Computed Properties
 
@@ -134,6 +134,21 @@ struct ReturnCheckInView: View {
         }
       }
     }
+    .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
+      Button("Delete", role: .destructive) {
+        Task { await submit() }
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("This will delete the device from \(activeProviders.joined(separator: " and ")).")
+    }
+    .alert(item: $alertItem) { item in
+      Alert(
+        title: Text(item.title),
+        message: Text(item.message),
+        dismissButton: .default(Text("OK"))
+      )
+    }
     .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
       if let newDevice = deviceSelection.selectedDevice {
         endUserName = newDevice.assignedUserName ?? ""
@@ -150,21 +165,6 @@ struct ReturnCheckInView: View {
       if !modelData.settings.snipeIsEnabled { updateSnipeStatus = false }
       if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
     }
-    .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
-      Button("Delete", role: .destructive) {
-        Task { await submit() }
-      }
-      Button("Cancel", role: .cancel) {}
-    } message: {
-      Text("This will delete the device from \(activeProviders.joined(separator: " and ")).")
-    }
-    .alert(item: $alertItem) { item in
-      Alert(
-        title: Text(item.title),
-        message: Text(item.message),
-        dismissButton: .default(Text("OK"))
-      )
-    }
   }
 
   // MARK: - Private Helpers
@@ -178,7 +178,7 @@ struct ReturnCheckInView: View {
     do {
       if deleteInMDM {
         // Remove device from MDM provider(s)
-        if let record = device.mdmRecords.first {
+        if let record = device.mdmRecords.first { // Assumes there is only 1 device to exterminate...
           try await MDMDeletionService.deleteAndRemove(
             record: record,
             from: device,
@@ -194,27 +194,37 @@ struct ReturnCheckInView: View {
       {
         // Update Snipe-IT status
         try await snipeClient.checkinSnipeAsset(
-          assetID: assetID,
-          statusID: modelData.settings.snipeDeployableStatusID,
-          note: "Returned via WoodBox"
+          SnipeCheckinRequest(
+            assetID: assetID,
+            statusID: modelData.settings.snipeDeployableStatusID,
+            note: "Returned via WoodBox"
+          )
         )
       }
 
-      if createFreshserviceRequest, let fsClient = modelData.settings.freshserviceClient {
-        // Create Freshservice return request
-        let customFields: FreshserviceCustomFields = [
-          "computer_returned_in_good_condition": .string(goodCondition ? "Yes" : "No"),
-          "returned_with_working_charger": .string(hasCharger ? "Yes" : "No"),
-          "notes": .string(notes),
-        ]
+      if createFreshserviceRequest, let freshserviceClient = modelData.settings.freshserviceClient {
+        // Create Freshservice ticket
+        var customFields: [String: String] = [:]
+        if !modelData.settings.freshserviceReturnConditionField.isEmpty {
+          customFields[modelData.settings.freshserviceReturnConditionField] =
+            goodCondition ? "Yes" : "No" // Hardcoded specific
+        }
+        if !modelData.settings.freshserviceReturnChargerField.isEmpty {
+          customFields[modelData.settings.freshserviceReturnChargerField] =
+            hasCharger ? "Yes" : "No" // Hardcoded specific
+        }
+        if !modelData.settings.freshserviceReturnNotesField.isEmpty, !notes.isEmpty {
+          customFields[modelData.settings.freshserviceReturnNotesField] = notes
+        }
 
-        _ = try await fsClient.createFreshserviceServiceRequest(
+        let serviceRequest = FreshserviceServiceRequest(
           serviceItemDisplayID: modelData.settings.freshserviceReturnedMachineServiceItemID,
           email: endUserEmail,
-          quantity: 1,
-          customFields: customFields,
+          customFields: customFields.isEmpty ? nil : customFields,
           workspaceID: modelData.settings.freshserviceWorkspaceID
         )
+
+        _ = try await freshserviceClient.createFreshserviceServiceRequest(serviceRequest)
       }
 
       resetForm()
@@ -244,26 +254,14 @@ struct ReturnCheckInView: View {
   private var snipeToggle: Binding<Bool> {
     Binding(
       get: { modelData.settings.snipeIsEnabled && updateSnipeStatus },
-      set: { newValue in
-        guard modelData.settings.snipeIsEnabled else {
-          updateSnipeStatus = false
-          return
-        }
-        updateSnipeStatus = newValue
-      }
+      set: { updateSnipeStatus = $0 }
     )
   }
 
   private var freshserviceToggle: Binding<Bool> {
     Binding(
       get: { modelData.settings.freshserviceIsEnabled && createFreshserviceRequest },
-      set: { newValue in
-        guard modelData.settings.freshserviceIsEnabled else {
-          createFreshserviceRequest = false
-          return
-        }
-        createFreshserviceRequest = newValue
-      }
+      set: { createFreshserviceRequest = $0 }
     )
   }
 }

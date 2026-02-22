@@ -74,8 +74,6 @@ struct DeviceDeduplicationView: View {
     } message: {
       Text(errorMessage ?? "")
     }
-    .navigationTitle("Device Deduplication")
-    .navigationSubtitle("Find and remove duplicate MDM records")
   }
 
   // MARK: - Private Methods

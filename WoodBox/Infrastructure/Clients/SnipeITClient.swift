@@ -45,23 +45,18 @@ struct SnipeITClient: Sendable {
     return allAssets
   }
 
-  func checkinSnipeAsset(assetID: Int, statusID: Int?, note: String? = nil) async throws {
-    let url = baseURL.appending(path: "api/v1/hardware/\(assetID)/checkin")
+  func checkinSnipeAsset(_ checkin: SnipeCheckinRequest) async throws {
+    let url = baseURL.appending(path: "api/v1/hardware/\(checkin.assetID)/checkin")
     var request = authorizedRequest(url: url, method: "POST")
-
-    var payload: [String: Any] = [:]
-    if let statusID {
-      payload["status_id"] = statusID
-    }
-    if let note, !note.isEmpty {
-      payload["note"] = note
-    }
-
-    if !payload.isEmpty {
-      request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-    }
-
+    request.httpBody = try JSONEncoder().encode(checkin)
     _ = try await http.data(for: request, action: "check-in asset", integration: "Snipe-IT")
+  }
+
+  func updateSnipeAsset(_ update: SnipeUpdateRequest) async throws {
+    let url = baseURL.appending(path: "api/v1/hardware/\(update.assetID)")
+    var request = authorizedRequest(url: url, method: "PATCH")
+    request.httpBody = try JSONEncoder().encode(update)
+    _ = try await http.data(for: request, action: "patch asset", integration: "Snipe-IT")
   }
 
   // MARK: - Private Helpers

@@ -54,6 +54,18 @@ final class AppSettings {
     }
   }
 
+  var snipeConditionField: String {
+    didSet {
+      UserDefaults.standard.set(snipeConditionField, forKey: "snipeConditionField")
+    }
+  }
+
+  var snipeConditionNotesField: String {
+    didSet {
+      UserDefaults.standard.set(snipeConditionNotesField, forKey: "snipeConditionNotesField")
+    }
+  }
+
   // MARK: - Jamf
 
   var jamfIsEnabled: Bool {
@@ -137,6 +149,42 @@ final class AppSettings {
       UserDefaults.standard.set(
         freshserviceReturnedMachineServiceItemID, forKey: "freshserviceReturnedMachineServiceItemID"
       )
+    }
+  }
+
+  var freshserviceReturnConditionField: String {
+    didSet {
+      UserDefaults.standard.set(
+        freshserviceReturnConditionField, forKey: "freshserviceReturnConditionField"
+      )
+    }
+  }
+
+  var freshserviceReturnChargerField: String {
+    didSet {
+      UserDefaults.standard.set(
+        freshserviceReturnChargerField, forKey: "freshserviceReturnChargerField"
+      )
+    }
+  }
+
+  var freshserviceReturnNotesField: String {
+    didSet {
+      UserDefaults.standard.set(
+        freshserviceReturnNotesField, forKey: "freshserviceReturnNotesField"
+      )
+    }
+  }
+
+  var freshserviceSpareField: String {
+    didSet {
+      UserDefaults.standard.set(freshserviceSpareField, forKey: "freshserviceSpareField")
+    }
+  }
+
+  var freshserviceCompNowField: String {
+    didSet {
+      UserDefaults.standard.set(freshserviceCompNowField, forKey: "freshserviceCompNowField")
     }
   }
 
@@ -233,6 +281,15 @@ final class AppSettings {
     snipeForSaleStatusID = UserDefaults.standard.integer(forKey: "snipeForSaleStatusID")
     snipeDeployableStatusID = UserDefaults.standard.integer(forKey: "snipeDeployableStatusID")
     snipeSpareStatusID = UserDefaults.standard.integer(forKey: "snipeSpareStatusID")
+    snipeConditionField =
+      UserDefaults.standard.string(forKey: "snipeConditionField")
+        ?? UserDefaults.standard.string(forKey: "snipeConditionFieldKey")
+        ?? ""
+    snipeConditionNotesField =
+      UserDefaults.standard.string(forKey: "snipeConditionNotesField")
+        ?? UserDefaults.standard.string(forKey: "snipeConditionNotesFieldKey")
+        ?? UserDefaults.standard.string(forKey: "snipeNotesFieldKey")
+        ?? ""
 
     jamfIsEnabled = UserDefaults.standard.bool(forKey: "jamfIsEnabled")
     jamfBaseURL = UserDefaults.standard.string(forKey: "jamfBaseURL") ?? ""
@@ -251,6 +308,15 @@ final class AppSettings {
     freshserviceReturnedMachineServiceItemID = UserDefaults.standard.integer(
       forKey: "freshserviceReturnedMachineServiceItemID"
     )
+    freshserviceReturnConditionField =
+      UserDefaults.standard.string(forKey: "freshserviceReturnConditionField") ?? ""
+    freshserviceReturnChargerField =
+      UserDefaults.standard.string(forKey: "freshserviceReturnChargerField") ?? ""
+    freshserviceReturnNotesField =
+      UserDefaults.standard.string(forKey: "freshserviceReturnNotesField") ?? ""
+    freshserviceSpareField = UserDefaults.standard.string(forKey: "freshserviceSpareField") ?? ""
+    freshserviceCompNowField =
+      UserDefaults.standard.string(forKey: "freshserviceCompNowField") ?? ""
 
     compNowIsEnabled = UserDefaults.standard.bool(forKey: "compNowIsEnabled")
     compNowUsername = UserDefaults.standard.string(forKey: "compNowUsername") ?? ""

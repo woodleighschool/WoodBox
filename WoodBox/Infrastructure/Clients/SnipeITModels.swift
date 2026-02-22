@@ -7,6 +7,65 @@
 
 import Foundation
 
+// MARK: - Request Models
+
+struct SnipeCheckinRequest: Encodable, Sendable {
+  let assetID: Int // used for URL path, not encoded
+  let statusID: Int?
+  let note: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case statusID = "status_id"
+    case note
+    // assetID intentionally omitted — used for URL path only
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encodeIfPresent(statusID, forKey: .statusID)
+    if let note, !note.isEmpty {
+      try container.encode(note, forKey: .note)
+    }
+  }
+}
+
+struct SnipeUpdateRequest: Encodable, Sendable {
+  let assetID: Int // used for URL path, not encoded
+  let statusID: Int?
+  let note: String?
+  let customFields: [String: String]?
+
+  private struct DynamicKey: CodingKey {
+    var stringValue: String
+    var intValue: Int? {
+      nil
+    }
+
+    init(stringValue: String) {
+      self.stringValue = stringValue
+    }
+
+    init?(intValue _: Int) {
+      nil
+    }
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: DynamicKey.self)
+    if let statusID {
+      try container.encode(statusID, forKey: .init(stringValue: "status_id"))
+    }
+    if let note, !note.isEmpty {
+      try container.encode(note, forKey: .init(stringValue: "notes"))
+    }
+    if let customFields {
+      for (key, value) in customFields {
+        try container.encode(value, forKey: .init(stringValue: key))
+      }
+    }
+  }
+}
+
 // MARK: - Response Models
 
 struct SnipeAssetsPage: Decodable {

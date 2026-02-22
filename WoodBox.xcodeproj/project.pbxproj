@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4110CAEA2F4A951D00D8F3A4 /* SwiftyJSON in Frameworks */ = {isa = PBXBuildFile; productRef = 4110CAE92F4A951D00D8F3A4 /* SwiftyJSON */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		41D603C22F38277800B46051 /* WoodBox.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WoodBox.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4110CAEA2F4A951D00D8F3A4 /* SwiftyJSON in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 			);
 			name = WoodBox;
 			packageProductDependencies = (
+				4110CAE92F4A951D00D8F3A4 /* SwiftyJSON */,
 			);
 			productName = WoodBox;
 			productReference = 41D603C22F38277800B46051 /* WoodBox.app */;
@@ -107,6 +113,9 @@
 			);
 			mainGroup = 41D603B92F38277800B46051;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4110CAE82F4A951D00D8F3A4 /* XCRemoteSwiftPackageReference "SwiftyJSON" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 41D603C32F38277800B46051 /* Products */;
 			projectDirPath = "";
@@ -412,6 +421,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4110CAE82F4A951D00D8F3A4 /* XCRemoteSwiftPackageReference "SwiftyJSON" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftyJSON/SwiftyJSON";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4110CAE92F4A951D00D8F3A4 /* SwiftyJSON */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4110CAE82F4A951D00D8F3A4 /* XCRemoteSwiftPackageReference "SwiftyJSON" */;
+			productName = SwiftyJSON;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 41D603BA2F38277800B46051 /* Project object */;
 }

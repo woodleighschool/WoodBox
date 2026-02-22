@@ -17,13 +17,13 @@ struct SalePreparationView: View {
   @Bindable var deviceSelection: DeviceSelectionState
 
   @State private var condition: DeviceCondition = .a
-  @State private var notes: String = ""
-  @State private var updateSnipeStatus: Bool = true
-  @State private var deleteInMDM: Bool = false
-  @State private var isSubmitting: Bool = false
+  @State private var conditionDescription = ""
+  @State private var updateSnipeStatus = true
+  @State private var deleteInMDM = false
+  @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
-  @State private var showDeleteConfirmation: Bool = false
-  @State private var showGradeHelp: Bool = false
+  @State private var showDeleteConfirmation = false
+  @State private var showGradeHelp = false
 
   // MARK: - Computed Properties
 
@@ -77,14 +77,15 @@ struct SalePreparationView: View {
                 gradeRow(condition)
               }
             }
-            .padding()
-            .frame(minWidth: 260)
-            .presentationCompactAdaptation(.popover)
+            .presentationCompactAdaptation(.sheet)
           }
         }
 
         TextField(
-          "Notes", text: $notes, prompt: Text("Broken chinbar, missing some keys."), axis: .vertical
+          "Condition Description",
+          text: $conditionDescription,
+          prompt: Text("Broken chinbar, missing some keys."),
+          axis: .vertical
         )
         .lineLimit(3 ... 6)
       } header: {
@@ -103,6 +104,7 @@ struct SalePreparationView: View {
         }
         .disabled(!modelData.settings.snipeIsEnabled)
 
+        // Only show button if device is in a MDM provider(s)
         if !activeProviders.isEmpty {
           Toggle(isOn: $deleteInMDM) {
             Label {
@@ -174,7 +176,7 @@ struct SalePreparationView: View {
     do {
       if deleteInMDM {
         // Remove device from MDM provider(s)
-        if let record = device.mdmRecords.first {
+        if let record = device.mdmRecords.first { // Assumes there is only 1 device to exterminate...
           try await MDMDeletionService.deleteAndRemove(
             record: record,
             from: device,
@@ -188,11 +190,22 @@ struct SalePreparationView: View {
       if updateSnipeStatus, let assetID = device.snipeID,
          let snipeClient = modelData.settings.snipeClient
       {
-        // Update Snipe-IT status for sale
-        try await snipeClient.checkinSnipeAsset(
-          assetID: assetID,
-          statusID: modelData.settings.snipeForSaleStatusID,
-          note: "Marked for Sale via WoodBox"
+        var customFields: [String: String] = [:]
+        if !modelData.settings.snipeConditionField.isEmpty {
+          customFields[modelData.settings.snipeConditionField] = condition.rawValue
+        }
+        if !conditionDescription.isEmpty, !modelData.settings.snipeConditionNotesField.isEmpty {
+          customFields[modelData.settings.snipeConditionNotesField] = conditionDescription
+        }
+
+        // Update Snipe-IT status
+        try await snipeClient.updateSnipeAsset(
+          SnipeUpdateRequest(
+            assetID: assetID,
+            statusID: modelData.settings.snipeForSaleStatusID,
+            note: nil,
+            customFields: customFields.isEmpty ? nil : customFields
+          )
         )
       }
 
@@ -208,7 +221,7 @@ struct SalePreparationView: View {
   private func resetForm() {
     deviceSelection.clear()
     condition = .a
-    notes = ""
+    conditionDescription = ""
     deleteInMDM = false
     updateSnipeStatus = modelData.settings.snipeIsEnabled
     alertItem = nil
@@ -219,13 +232,7 @@ struct SalePreparationView: View {
   private var snipeToggle: Binding<Bool> {
     Binding(
       get: { modelData.settings.snipeIsEnabled && updateSnipeStatus },
-      set: { newValue in
-        guard modelData.settings.snipeIsEnabled else {
-          updateSnipeStatus = false
-          return
-        }
-        updateSnipeStatus = newValue
-      }
+      set: { updateSnipeStatus = $0 }
     )
   }
 
@@ -240,5 +247,3 @@ struct SalePreparationView: View {
     }
   }
 }
-
-// MARK: - Focus fields

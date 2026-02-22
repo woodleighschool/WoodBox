@@ -160,6 +160,8 @@ struct SnipeSettingsView: View {
         TextField("Deployable Status ID", value: $settings.snipeDeployableStatusID, format: .number)
         TextField("For Sale Status ID", value: $settings.snipeForSaleStatusID, format: .number)
         TextField("Spare Status ID", value: $settings.snipeSpareStatusID, format: .number)
+        TextField("Condition Custom Field", text: $settings.snipeConditionField)
+        TextField("Condition Notes Custom Field", text: $settings.snipeConditionNotesField)
       }
     }
     .formStyle(.grouped)
@@ -422,6 +424,11 @@ struct FreshserviceSettingsView: View {
           value: $settings.freshserviceReturnedMachineServiceItemID,
           format: .number
         )
+        TextField("Return Condition Field", text: $settings.freshserviceReturnConditionField)
+        TextField("Return Charger Field", text: $settings.freshserviceReturnChargerField)
+        TextField("Return Notes Field", text: $settings.freshserviceReturnNotesField)
+        TextField("Spare Field", text: $settings.freshserviceSpareField)
+        TextField("CompNow Ticket Field", text: $settings.freshserviceCompNowField)
       }
     }
     .formStyle(.grouped)

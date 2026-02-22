@@ -27,7 +27,6 @@ struct ToolsSplitView: View {
         NavigationStack {
           RepairIntakeView(deviceSelection: modelData.deviceSelection)
             .navigationTitle("Repair Intake")
-            .navigationSubtitle("Log repairs and generate tickets")
         }
       }
 
@@ -38,7 +37,6 @@ struct ToolsSplitView: View {
         NavigationStack {
           ReturnCheckInView(deviceSelection: modelData.deviceSelection)
             .navigationTitle("Return Check-In")
-            .navigationSubtitle("Process returned devices")
         }
       }
 
@@ -50,7 +48,6 @@ struct ToolsSplitView: View {
         NavigationStack {
           SalePreparationView(deviceSelection: modelData.deviceSelection)
             .navigationTitle("Sale Preparation")
-            .navigationSubtitle("Prepare devices for sale")
         }
       }
 
@@ -62,7 +59,6 @@ struct ToolsSplitView: View {
         NavigationStack {
           DeviceDeduplicationView()
             .navigationTitle("Device Deduplication")
-            .navigationSubtitle("Merge duplicate records")
         }
       }
 

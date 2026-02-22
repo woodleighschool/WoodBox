@@ -27,27 +27,10 @@ struct FreshserviceClient: Sendable {
     _ = try await fetchFreshserviceTickets(limit: 1)
   }
 
-  func createFreshserviceTicket(
-    email: String,
-    subject: String,
-    description: String,
-    customFields: FreshserviceCustomFields = [:],
-    workspaceID: Int? = nil
-  ) async throws -> String {
+  func createFreshserviceTicket(_ ticket: FreshserviceTicketRequest) async throws -> String {
     let url = baseURL.appending(path: "api/v2/tickets")
     var request = authorizedRequest(url: url, method: "POST")
-
-    let payload = FreshserviceTicketRequest(
-      email: email,
-      subject: subject,
-      description: description,
-      status: .open,
-      priority: .low,
-      customFields: customFields.isEmpty ? nil : customFields,
-      workspaceID: workspaceID
-    )
-
-    request.httpBody = try JSONEncoder().encode(payload)
+    request.httpBody = try JSONEncoder().encode(ticket)
 
     let response = try await http.decode(
       FreshserviceTicketResponse.self,
@@ -58,26 +41,14 @@ struct FreshserviceClient: Sendable {
     return String(response.ticket.id)
   }
 
-  func createFreshserviceServiceRequest(
-    serviceItemDisplayID: Int,
-    email: String,
-    quantity: Int = 1,
-    customFields: FreshserviceCustomFields = [:],
-    workspaceID: Int? = nil
-  ) async throws -> String {
+  func createFreshserviceServiceRequest(_ serviceRequest: FreshserviceServiceRequest) async throws
+    -> String
+  {
     let url = baseURL.appending(
-      path: "api/v2/service_catalog/items/\(serviceItemDisplayID)/place_request"
+      path: "api/v2/service_catalog/items/\(serviceRequest.serviceItemDisplayID)/place_request"
     )
     var request = authorizedRequest(url: url, method: "POST")
-
-    let payload = FreshserviceServiceRequest(
-      email: email,
-      quantity: quantity,
-      customFields: customFields.isEmpty ? nil : customFields,
-      workspaceID: workspaceID
-    )
-
-    request.httpBody = try JSONEncoder().encode(payload)
+    request.httpBody = try JSONEncoder().encode(serviceRequest)
 
     let response = try await http.decode(
       FreshserviceServiceRequestResponse.self,

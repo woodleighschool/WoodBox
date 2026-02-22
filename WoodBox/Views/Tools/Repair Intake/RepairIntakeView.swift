@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import SwiftyJSON
 
 struct RepairIntakeView: View {
   // MARK: - Properties
@@ -16,13 +17,13 @@ struct RepairIntakeView: View {
   @Bindable var deviceSelection: DeviceSelectionState
   @State private var selectedSpare: Device?
 
-  @State private var endUserName: String = ""
-  @State private var endUserEmail: String = ""
-  @State private var problem: String = ""
-  @State private var notes: String = ""
-  @State private var createCompNowTicket: Bool = true
-  @State private var createFreshserviceTicket: Bool = true
-  @State private var isSubmitting: Bool = false
+  @State private var endUserName = ""
+  @State private var endUserEmail = ""
+  @State private var problem = ""
+  @State private var notes = ""
+  @State private var createCompNowTicket = true
+  @State private var createFreshserviceTicket = true
+  @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
 
   // MARK: - Body
@@ -85,8 +86,11 @@ struct RepairIntakeView: View {
         Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
       }
     }
-    .deviceSearch(selection: deviceSelection)
     .formStyle(.grouped)
+    .deviceSearch(selection: deviceSelection)
+    .animation(
+      .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
+    )
     .scrollDismissesKeyboard(.interactively)
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
@@ -100,6 +104,13 @@ struct RepairIntakeView: View {
           .buttonStyle(.borderedProminent)
         }
       }
+    }
+    .alert(item: $alertItem) { item in
+      Alert(
+        title: Text(item.title),
+        message: Text(item.message),
+        dismissButton: .default(Text("OK"))
+      )
     }
     .onChange(of: deviceSelection.selectedDevice) { _, newDevice in
       if let newDevice {
@@ -117,13 +128,6 @@ struct RepairIntakeView: View {
       if !modelData.settings.compNowIsEnabled { createCompNowTicket = false }
       if !modelData.settings.freshserviceIsEnabled { createFreshserviceTicket = false }
     }
-    .alert(item: $alertItem) { item in
-      Alert(
-        title: Text(item.title),
-        message: Text(item.message),
-        dismissButton: .default(Text("OK"))
-      )
-    }
   }
 
   // MARK: - Private Helpers
@@ -137,7 +141,7 @@ struct RepairIntakeView: View {
     do {
       var compNowTicketID: String?
 
-      if createCompNowTicket, let client = modelData.settings.compNowClient {
+      if createCompNowTicket, let compNowClient = modelData.settings.compNowClient {
         // Create CompNow ticket
         let ticket = CompNowTicket(
           endUser: endUserName,
@@ -158,30 +162,41 @@ struct RepairIntakeView: View {
           reference: nil
         )
 
-        compNowTicketID = try await client.createCompNowTicket(ticket)
+        compNowTicketID = try await compNowClient.createCompNowTicket(ticket)
       }
 
-      if createFreshserviceTicket, let client = modelData.settings.freshserviceClient {
+      if createFreshserviceTicket, let freshserviceClient = modelData.settings.freshserviceClient {
         // Create Freshservice ticket
-        var customFields: FreshserviceCustomFields = ["print_label": .bool(true)]
-        if let spare = selectedSpare {
-          // Safe: spare picker enforces non-empty name
-          customFields["student_spare"] = .string(spare.name!)
+        var customFields: JSON = ["print_label": true] // Hardcoded specific
+        if let spare = selectedSpare, !modelData.settings.freshserviceSpareField.isEmpty {
+          customFields[modelData.settings.freshserviceSpareField] = JSON(spare.name!) // Assume spare name is always 'not nil'
         }
-        if let cnTicket = compNowTicketID {
-          customFields["compnow_ticket_no"] = .string(cnTicket)
+        if let cnTicket = compNowTicketID, !modelData.settings.freshserviceCompNowField.isEmpty {
+          customFields[modelData.settings.freshserviceCompNowField] = JSON(cnTicket)
         }
 
-        _ = try await client.createFreshserviceTicket(
+        let ticket = FreshserviceTicketRequest(
           email: endUserEmail,
-          subject: "REPAIR - \(problem)",
+          subject: "REPAIR - \(problem)", // Hardcoded specific
           description: notes,
+          status: .open,
+          priority: .low,
+          urgency: 1,
+          impact: 1,
+          category: "Hardware", // Hardcoded specific
+          subCategory: "Computer", // Hardcoded specific
+          itemCategory: "Mac", // Hardcoded specific
+          responderID: 120_001_544_231, // Hardcoded specific
+          tags: ["repair"], // Hardcoded specific
           customFields: customFields,
           workspaceID: modelData.settings.freshserviceWorkspaceID
         )
+
+        _ = try await freshserviceClient.createFreshserviceTicket(ticket)
       }
 
       resetForm()
+
     } catch {
       alertItem = AlertItem(title: "Error", message: error.localizedDescription)
     }
@@ -206,26 +221,14 @@ struct RepairIntakeView: View {
   private var compNowToggle: Binding<Bool> {
     Binding(
       get: { modelData.settings.compNowIsEnabled && createCompNowTicket },
-      set: { newValue in
-        guard modelData.settings.compNowIsEnabled else {
-          createCompNowTicket = false
-          return
-        }
-        createCompNowTicket = newValue
-      }
+      set: { createCompNowTicket = $0 }
     )
   }
 
   private var freshserviceToggle: Binding<Bool> {
     Binding(
       get: { modelData.settings.freshserviceIsEnabled && createFreshserviceTicket },
-      set: { newValue in
-        guard modelData.settings.freshserviceIsEnabled else {
-          createFreshserviceTicket = false
-          return
-        }
-        createFreshserviceTicket = newValue
-      }
+      set: { createFreshserviceTicket = $0 }
     )
   }
 }

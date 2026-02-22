@@ -6,57 +6,7 @@
 //
 
 import Foundation
-
-// MARK: - JSON Value for Freshservice payloads
-
-enum FreshserviceJSONValue: Codable, Sendable {
-  case string(String)
-  case int(Int)
-  case double(Double)
-  case bool(Bool)
-  case array([FreshserviceJSONValue])
-  case object([String: FreshserviceJSONValue])
-  case null
-
-  init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
-    if container.decodeNil() {
-      self = .null
-    } else if let b = try? container.decode(Bool.self) {
-      self = .bool(b)
-    } else if let i = try? container.decode(Int.self) {
-      self = .int(i)
-    } else if let d = try? container.decode(Double.self) {
-      self = .double(d)
-    } else if let s = try? container.decode(String.self) {
-      self = .string(s)
-    } else if let array = try? container.decode([FreshserviceJSONValue].self) {
-      self = .array(array)
-    } else if let object = try? container.decode([String: FreshserviceJSONValue].self) {
-      self = .object(object)
-    } else {
-      throw DecodingError.dataCorruptedError(
-        in: container,
-        debugDescription: "Unsupported JSON value"
-      )
-    }
-  }
-
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
-    switch self {
-    case let .string(s): try container.encode(s)
-    case let .int(i): try container.encode(i)
-    case let .double(d): try container.encode(d)
-    case let .bool(b): try container.encode(b)
-    case let .array(arr): try container.encode(arr)
-    case let .object(obj): try container.encode(obj)
-    case .null: try container.encodeNil()
-    }
-  }
-}
-
-typealias FreshserviceCustomFields = [String: FreshserviceJSONValue]
+import SwiftyJSON
 
 // MARK: - Ticket Request/Response
 
@@ -66,19 +16,27 @@ struct FreshserviceTicketRequest: Encodable, Sendable {
   let description: String
   let status: FreshserviceTicketStatus
   let priority: FreshserviceTicketPriority
-  let customFields: FreshserviceCustomFields?
+  let urgency: Int
+  let impact: Int
+  let category: String?
+  let subCategory: String?
+  let itemCategory: String?
+  let responderID: Int?
+  let tags: [String]?
+  let customFields: JSON?
   let workspaceID: Int?
 
   enum CodingKeys: String, CodingKey {
-    case email
-    case subject
-    case description
-    case status
-    case priority
+    case email, subject, description, status, priority, urgency, impact, category, tags
+    case subCategory = "sub_category"
+    case itemCategory = "item_category"
+    case responderID = "responder_id"
     case customFields = "custom_fields"
     case workspaceID = "workspace_id"
   }
 }
+
+// MARK: - Ticket Response
 
 struct FreshserviceTicketResponse: Decodable, Sendable {
   let ticket: FreshserviceTicket
@@ -107,9 +65,10 @@ enum FreshserviceTicketPriority: Int, Codable, Sendable {
 // MARK: - Service Request / Response
 
 struct FreshserviceServiceRequest: Encodable, Sendable {
+  let serviceItemDisplayID: Int // used for URL path, not encoded
   let email: String
-  let quantity: Int
-  let customFields: FreshserviceCustomFields?
+  let quantity: Int = 1
+  let customFields: [String: String]?
   let workspaceID: Int?
 
   enum CodingKeys: String, CodingKey {
@@ -117,6 +76,7 @@ struct FreshserviceServiceRequest: Encodable, Sendable {
     case quantity
     case customFields = "custom_fields"
     case workspaceID = "workspace_id"
+    // serviceItemDisplayID intentionally omitted — used for URL path only
   }
 }
 
