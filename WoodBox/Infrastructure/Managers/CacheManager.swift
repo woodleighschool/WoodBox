@@ -184,7 +184,7 @@ final class CacheManager {
       device.assignedUserName = asset.assignedTo?.name.nilIfEmpty
       device.assignedUserEmail = asset.assignedTo?.email.nilIfEmpty
       device.warrantyExpires = asset.warrantyExpires?.date.flatMap {
-        try? Date($0, strategy: .iso8601)
+        Self.dateOnlyFormatter.date(from: $0)
       }
 
       // Refresh MDM records
@@ -239,6 +239,14 @@ final class CacheManager {
   }
 
   // MARK: - Helpers
+
+  private static let dateOnlyFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.timeZone = TimeZone(secondsFromGMT: 0)
+    return f
+  }()
 
   private func markAsSynced() {
     let now = Date()
