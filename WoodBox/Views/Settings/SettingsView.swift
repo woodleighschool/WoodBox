@@ -28,7 +28,7 @@ private enum SettingsSection: CaseIterable, Identifiable {
   var title: String {
     switch self {
     case .snipe: "Snipe-IT"
-    case .jamf: "Jamf Pro"
+    case .jamf: "Jamf"
     case .intune: "Intune"
     case .freshservice: "Freshservice"
     case .compnow: "CompNow"

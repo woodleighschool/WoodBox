@@ -12,6 +12,10 @@
 	<integer></integer>
 	<key>snipeSpareStatusID</key>
 	<integer></integer>
+	<key>snipeConditionField</key>
+	<string></string>
+	<key>snipeConditionNotesField</key>
+	<string></string>
 	<key>jamfIsEnabled</key>
 	<false/>
 	<key>jamfBaseURL</key>
@@ -32,6 +36,16 @@
 	<integer></integer>
 	<key>freshserviceReturnedMachineServiceItemID</key>
 	<integer></integer>
+	<key>freshserviceReturnConditionField</key>
+	<string></string>
+	<key>freshserviceReturnChargerField</key>
+	<string></string>
+	<key>freshserviceReturnNotesField</key>
+	<string></string>
+	<key>freshserviceSpareField</key>
+	<string></string>
+	<key>freshserviceCompNowField</key>
+	<string></string>
 	<key>compNowIsEnabled</key>
 	<false/>
 	<key>compNowUsername</key>

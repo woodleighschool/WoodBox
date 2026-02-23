@@ -73,13 +73,7 @@ struct JamfClient: Sendable {
   func deleteJamfComputer(id: String) async throws {
     let url = baseURL.appending(path: "api/v3/computers-inventory/\(id)")
     let request = try await authorizedRequest(url: url, method: "DELETE")
-    _ = try await http.data(for: request, action: "delete computer", integration: "Jamf Pro")
-  }
-
-  func deleteJamfMobileDevice(id: String) async throws {
-    let url = baseURL.appending(path: "api/v2/mobile-devices/\(id)")
-    let request = try await authorizedRequest(url: url, method: "DELETE")
-    _ = try await http.data(for: request, action: "delete mobile device", integration: "Jamf Pro")
+    _ = try await http.data(for: request, action: "delete computer", integration: "Jamf")
   }
 
   // MARK: - Private Helpers
@@ -103,7 +97,7 @@ struct JamfClient: Sendable {
       JamfComputersResponse.self,
       from: request,
       action: "fetch computers",
-      integration: "Jamf Pro"
+      integration: "Jamf"
     )
   }
 
@@ -127,7 +121,7 @@ struct JamfClient: Sendable {
       JamfMobileDevicesResponse.self,
       from: request,
       action: "fetch mobile devices",
-      integration: "Jamf Pro"
+      integration: "Jamf"
     )
   }
 
