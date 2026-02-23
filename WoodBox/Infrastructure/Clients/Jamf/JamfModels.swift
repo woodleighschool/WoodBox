@@ -7,29 +7,31 @@
 
 import Foundation
 
-// MARK: - Computer Models
+// MARK: Computers
 
+/// Response
 struct JamfComputersResponse: Decodable {
   let results: [JamfComputer]
 }
 
 struct JamfComputer: Decodable {
   let id: String
-  let general: JamfComputerGeneral?
+  let general: JamfComputerGeneral
   let hardware: JamfComputerHardware
 }
 
 struct JamfComputerGeneral: Decodable {
-  let name: String?
   let lastContactTime: String?
+  let name: String?
 }
 
 struct JamfComputerHardware: Decodable {
   let serialNumber: String
 }
 
-// MARK: - Mobile Device Models
+// MARK: Mobile Devices
 
+/// Response
 struct JamfMobileDevicesResponse: Decodable {
   let results: [JamfMobileDevice]
 }
@@ -37,7 +39,7 @@ struct JamfMobileDevicesResponse: Decodable {
 struct JamfMobileDevice: Decodable {
   let mobileDeviceId: String
   let displayName: String?
-  let general: JamfMobileDeviceGeneral?
+  let general: JamfMobileDeviceGeneral
   let hardware: JamfMobileDeviceHardware
 }
 

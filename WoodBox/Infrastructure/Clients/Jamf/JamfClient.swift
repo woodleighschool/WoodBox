@@ -16,14 +16,14 @@ struct JamfClient: Sendable {
 
   // MARK: - Init
 
-  init(baseURL: URL, clientID: String, clientSecret: String) {
+  init(baseURL: URL, clientId: String, clientSecret: String) {
     self.baseURL = baseURL
 
     let tokenURL = baseURL.appending(path: "api/oauth/token")
 
     var components = URLComponents()
     components.queryItems = [
-      URLQueryItem(name: "client_id", value: clientID),
+      URLQueryItem(name: "client_id", value: clientId),
       URLQueryItem(name: "client_secret", value: clientSecret),
       URLQueryItem(name: "grant_type", value: "client_credentials"),
     ]

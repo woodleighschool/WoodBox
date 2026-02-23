@@ -23,17 +23,17 @@ struct SnipeITClient: Sendable {
 
   // MARK: - Public Methods
 
-  func testSnipeConnection() async throws {
-    _ = try await fetchSnipeAssetsPage(limit: 1, offset: 0)
+  func testSnipeItConnection() async throws {
+    _ = try await fetchSnipeItAssetsPage(limit: 1, offset: 0)
   }
 
-  func fetchSnipeAssets() async throws -> [SnipeAsset] {
-    var allAssets: [SnipeAsset] = []
+  func fetchSnipeItAssets() async throws -> [SnipeItAssetResponse] {
+    var allAssets: [SnipeItAssetResponse] = []
     var offset = 0
     let limit = 200
 
     while true {
-      let page = try await fetchSnipeAssetsPage(limit: limit, offset: offset)
+      let page = try await fetchSnipeItAssetsPage(limit: limit, offset: offset)
       allAssets.append(contentsOf: page.rows)
 
       if page.rows.count < limit {
@@ -45,15 +45,15 @@ struct SnipeITClient: Sendable {
     return allAssets
   }
 
-  func checkinSnipeAsset(_ checkin: SnipeCheckinRequest) async throws {
-    let url = baseURL.appending(path: "api/v1/hardware/\(checkin.assetID)/checkin")
+  func checkinSnipeItAsset(assetId: Int, request checkin: SnipeItCheckinRequest) async throws {
+    let url = baseURL.appending(path: "api/v1/hardware/\(assetId)/checkin")
     var request = authorizedRequest(url: url, method: "POST")
     request.httpBody = try JSONEncoder().encode(checkin)
     _ = try await http.data(for: request, action: "check-in asset", integration: "Snipe-IT")
   }
 
-  func updateSnipeAsset(_ update: SnipeUpdateRequest) async throws {
-    let url = baseURL.appending(path: "api/v1/hardware/\(update.assetID)")
+  func updateSnipeItAsset(assetId: Int, request update: SnipeItUpdateRequest) async throws {
+    let url = baseURL.appending(path: "api/v1/hardware/\(assetId)")
     var request = authorizedRequest(url: url, method: "PATCH")
     request.httpBody = try JSONEncoder().encode(update)
     _ = try await http.data(for: request, action: "patch asset", integration: "Snipe-IT")
@@ -61,7 +61,7 @@ struct SnipeITClient: Sendable {
 
   // MARK: - Private Helpers
 
-  private func fetchSnipeAssetsPage(limit: Int, offset: Int) async throws -> SnipeAssetsPage {
+  private func fetchSnipeItAssetsPage(limit: Int, offset: Int) async throws -> SnipeItAssetsResponse {
     let url = baseURL.appending(
       path: "api/v1/hardware",
       queryItems: [
@@ -71,7 +71,7 @@ struct SnipeITClient: Sendable {
     )
     let request = authorizedRequest(url: url)
     return try await http.decode(
-      SnipeAssetsPage.self,
+      SnipeItAssetsResponse.self,
       from: request,
       action: "fetch assets",
       integration: "Snipe-IT"

@@ -24,7 +24,7 @@ enum MDMDeletionService {
           throw IntegrationError(action: "delete", integration: "Jamf", statusCode: -1)
           // No DELETE for mobile devices...?
         } else {
-          try await jamfClient.deleteJamfComputer(id: record.deviceID)
+          try await jamfClient.deleteJamfComputer(id: record.deviceId)
         }
       }
 
@@ -32,7 +32,7 @@ enum MDMDeletionService {
       guard let intuneClient else {
         throw IntegrationError(action: "delete", integration: "Intune", statusCode: -1)
       }
-      try await intuneClient.deleteIntuneDevice(id: record.deviceID)
+      try await intuneClient.deleteIntuneDevice(id: record.deviceId)
     }
   }
 

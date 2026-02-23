@@ -21,7 +21,7 @@ struct ReturnCheckInView: View {
   @State private var goodCondition = true
   @State private var hasCharger = true
   @State private var deleteInMDM = false
-  @State private var updateSnipeStatus = true
+  @State private var updateSnipeItStatus = true
   @State private var createFreshserviceRequest = true
   @State private var notes = ""
   @State private var isSubmitting = false
@@ -86,7 +86,7 @@ struct ReturnCheckInView: View {
           }
         }
 
-        Toggle(isOn: snipeToggle) {
+        Toggle(isOn: snipeItToggle) {
           Label {
             Text("Update Snipe-IT Status")
           } icon: {
@@ -95,11 +95,11 @@ struct ReturnCheckInView: View {
               .scaledToFit()
           }
         }
-        .disabled(!modelData.settings.snipeIsEnabled)
+        .disabled(!modelData.settings.snipeItIsEnabled)
 
         Toggle(isOn: freshserviceToggle) {
           Label {
-            Text("Create Return Ticket")
+            Text("Create Service Request")
           } icon: {
             Image("freshservice")
               .resizable()
@@ -155,14 +155,14 @@ struct ReturnCheckInView: View {
         endUserEmail = newDevice.assignedUserEmail ?? ""
       }
     }
-    .onChange(of: modelData.settings.snipeIsEnabled) { _, isEnabled in
-      if !isEnabled { updateSnipeStatus = false }
+    .onChange(of: modelData.settings.snipeItIsEnabled) { _, isEnabled in
+      if !isEnabled { updateSnipeItStatus = false }
     }
     .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
       if !isEnabled { createFreshserviceRequest = false }
     }
     .task {
-      if !modelData.settings.snipeIsEnabled { updateSnipeStatus = false }
+      if !modelData.settings.snipeItIsEnabled { updateSnipeItStatus = false }
       if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
     }
   }
@@ -189,42 +189,44 @@ struct ReturnCheckInView: View {
         }
       }
 
-      if updateSnipeStatus, let assetID = device.snipeID,
-         let snipeClient = modelData.settings.snipeClient
+      if updateSnipeItStatus, let assetId = device.snipeItId,
+         let snipeItClient = modelData.settings.snipeItClient
       {
         // Update Snipe-IT status
-        try await snipeClient.checkinSnipeAsset(
-          SnipeCheckinRequest(
-            assetID: assetID,
-            statusID: modelData.settings.snipeDeployableStatusID,
-            note: "Returned via WoodBox"
+        try await snipeItClient.checkinSnipeItAsset(
+          assetId: assetId,
+          request: SnipeItCheckinRequest(
+            statusId: modelData.settings.snipeItDeployableStatusId,
+            name: nil,
+            note: "Returned via WoodBox",
+            locationId: nil
           )
         )
       }
 
       if createFreshserviceRequest, let freshserviceClient = modelData.settings.freshserviceClient {
-        // Create Freshservice ticket
-        var customFields: [String: String] = [:]
+        // Create Freshservice service request
+        var customFields: [String: JSONValue] = [:]
         if !modelData.settings.freshserviceReturnConditionField.isEmpty {
           customFields[modelData.settings.freshserviceReturnConditionField] =
-            goodCondition ? "Yes" : "No" // Hardcoded specific
+            .string(goodCondition ? "Yes" : "No") // Hardcoded specific
         }
         if !modelData.settings.freshserviceReturnChargerField.isEmpty {
           customFields[modelData.settings.freshserviceReturnChargerField] =
-            hasCharger ? "Yes" : "No" // Hardcoded specific
+            .string(hasCharger ? "Yes" : "No") // Hardcoded specific
         }
         if !modelData.settings.freshserviceReturnNotesField.isEmpty, !notes.isEmpty {
-          customFields[modelData.settings.freshserviceReturnNotesField] = notes
+          customFields[modelData.settings.freshserviceReturnNotesField] = .string(notes)
         }
 
-        let serviceRequest = FreshserviceServiceRequest(
-          serviceItemDisplayID: modelData.settings.freshserviceReturnedMachineServiceItemID,
-          email: endUserEmail,
-          customFields: customFields.isEmpty ? nil : customFields,
-          workspaceID: modelData.settings.freshserviceWorkspaceID
+        _ = try await freshserviceClient.createFreshserviceServiceRequest(
+          serviceItemId: modelData.settings.freshserviceReturnedMachineServiceItemId,
+          request: FreshserviceServiceRequestCreateRequest(
+            email: endUserEmail,
+            customFields: customFields.isEmpty ? nil : customFields,
+            workspaceId: modelData.settings.freshserviceWorkspaceId
+          )
         )
-
-        _ = try await freshserviceClient.createFreshserviceServiceRequest(serviceRequest)
       }
 
       resetForm()
@@ -244,17 +246,17 @@ struct ReturnCheckInView: View {
     hasCharger = true
     deleteInMDM = false
     notes = ""
-    updateSnipeStatus = modelData.settings.snipeIsEnabled
+    updateSnipeItStatus = modelData.settings.snipeItIsEnabled
     createFreshserviceRequest = modelData.settings.freshserviceIsEnabled
     alertItem = nil
   }
 
   // MARK: - Toggle Bindings
 
-  private var snipeToggle: Binding<Bool> {
+  private var snipeItToggle: Binding<Bool> {
     Binding(
-      get: { modelData.settings.snipeIsEnabled && updateSnipeStatus },
-      set: { updateSnipeStatus = $0 }
+      get: { modelData.settings.snipeItIsEnabled && updateSnipeItStatus },
+      set: { updateSnipeItStatus = $0 }
     )
   }
 

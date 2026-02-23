@@ -18,7 +18,7 @@ struct SalePreparationView: View {
 
   @State private var condition: DeviceCondition = .a
   @State private var conditionDescription = ""
-  @State private var updateSnipeStatus = true
+  @State private var updateSnipeItStatus = true
   @State private var deleteInMDM = false
   @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
@@ -93,7 +93,7 @@ struct SalePreparationView: View {
       }
 
       Section {
-        Toggle(isOn: snipeToggle) {
+        Toggle(isOn: snipeItToggle) {
           Label {
             Text("Update Snipe-IT Status")
           } icon: {
@@ -102,7 +102,7 @@ struct SalePreparationView: View {
               .scaledToFit()
           }
         }
-        .disabled(!modelData.settings.snipeIsEnabled)
+        .disabled(!modelData.settings.snipeItIsEnabled)
 
         // Only show button if device is in a MDM provider(s)
         if !activeProviders.isEmpty {
@@ -157,11 +157,11 @@ struct SalePreparationView: View {
         dismissButton: .default(Text("OK"))
       )
     }
-    .onChange(of: modelData.settings.snipeIsEnabled) { _, isEnabled in
-      if !isEnabled { updateSnipeStatus = false }
+    .onChange(of: modelData.settings.snipeItIsEnabled) { _, isEnabled in
+      if !isEnabled { updateSnipeItStatus = false }
     }
     .task {
-      if !modelData.settings.snipeIsEnabled { updateSnipeStatus = false }
+      if !modelData.settings.snipeItIsEnabled { updateSnipeItStatus = false }
     }
   }
 
@@ -187,23 +187,25 @@ struct SalePreparationView: View {
         }
       }
 
-      if updateSnipeStatus, let assetID = device.snipeID,
-         let snipeClient = modelData.settings.snipeClient
+      if updateSnipeItStatus, let assetId = device.snipeItId,
+         let snipeItClient = modelData.settings.snipeItClient
       {
-        var customFields: [String: String] = [:]
-        if !modelData.settings.snipeConditionField.isEmpty {
-          customFields[modelData.settings.snipeConditionField] = condition.rawValue
+        var customFields: [String: JSONValue] = [:]
+        if !modelData.settings.snipeItConditionField.isEmpty {
+          customFields[modelData.settings.snipeItConditionField] = .string(condition.rawValue)
         }
-        if !conditionDescription.isEmpty, !modelData.settings.snipeConditionNotesField.isEmpty {
-          customFields[modelData.settings.snipeConditionNotesField] = conditionDescription
+        if !conditionDescription.isEmpty, !modelData.settings.snipeItConditionNotesField.isEmpty {
+          customFields[modelData.settings.snipeItConditionNotesField] = .string(
+            conditionDescription
+          )
         }
 
         // Update Snipe-IT status
-        try await snipeClient.updateSnipeAsset(
-          SnipeUpdateRequest(
-            assetID: assetID,
-            statusID: modelData.settings.snipeForSaleStatusID,
-            note: nil,
+        try await snipeItClient.updateSnipeItAsset(
+          assetId: assetId,
+          request: SnipeItUpdateRequest(
+            statusId: modelData.settings.snipeItForSaleStatusId,
+            notes: nil,
             customFields: customFields.isEmpty ? nil : customFields
           )
         )
@@ -223,16 +225,16 @@ struct SalePreparationView: View {
     condition = .a
     conditionDescription = ""
     deleteInMDM = false
-    updateSnipeStatus = modelData.settings.snipeIsEnabled
+    updateSnipeItStatus = modelData.settings.snipeItIsEnabled
     alertItem = nil
   }
 
   // MARK: - Toggle Bindings
 
-  private var snipeToggle: Binding<Bool> {
+  private var snipeItToggle: Binding<Bool> {
     Binding(
-      get: { modelData.settings.snipeIsEnabled && updateSnipeStatus },
-      set: { updateSnipeStatus = $0 }
+      get: { modelData.settings.snipeItIsEnabled && updateSnipeItStatus },
+      set: { updateSnipeItStatus = $0 }
     )
   }
 

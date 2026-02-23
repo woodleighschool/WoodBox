@@ -19,12 +19,12 @@ struct IntuneClient: Sendable {
 
   // MARK: - Init
 
-  init(tenantID: String, clientID: String, clientSecret: String) {
-    let tokenURL = URL(string: "https://login.microsoftonline.com/\(tenantID)/oauth2/v2.0/token")!
+  init(tenantId: String, clientId: String, clientSecret: String) {
+    let tokenURL = URL(string: "https://login.microsoftonline.com/\(tenantId)/oauth2/v2.0/token")!
 
     var components = URLComponents()
     components.queryItems = [
-      URLQueryItem(name: "client_id", value: clientID),
+      URLQueryItem(name: "client_id", value: clientId),
       URLQueryItem(name: "client_secret", value: clientSecret),
       URLQueryItem(name: "scope", value: "https://graph.microsoft.com/.default"),
       URLQueryItem(name: "grant_type", value: "client_credentials"),

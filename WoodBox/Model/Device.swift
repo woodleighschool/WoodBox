@@ -12,16 +12,16 @@ import SwiftData
 final class Device {
   // MARK: - Properties
 
-  @Attribute(.unique) var serial: String
-  var assetTag: String
+  @Attribute(.unique) var assetTag: String
+  var serial: String
 
   var name: String?
   var model: String
   var category: String?
 
   var status: String?
-  var statusID: Int?
-  var snipeID: Int?
+  var statusId: Int?
+  var snipeItId: Int?
 
   var assignedUserName: String?
   var assignedUserEmail: String?
@@ -44,7 +44,7 @@ final class Device {
 final class MDMRecord {
   @Attribute(.unique) var id: String
   var provider: MDMProvider
-  var deviceID: String
+  var deviceId: String
   var deviceName: String?
   var lastCheckIn: Date?
   var jamfDeviceType: JamfDeviceType?
@@ -53,15 +53,15 @@ final class MDMRecord {
 
   init(
     provider: MDMProvider,
-    deviceID: String,
+    deviceId: String,
     deviceName: String?,
     lastCheckIn: Date?,
     jamfDeviceType: JamfDeviceType?,
     device: Device? = nil
   ) {
-    id = Self.makeID(provider: provider, jamfDeviceType: jamfDeviceType, deviceID: deviceID)
+    id = Self.makeId(provider: provider, jamfDeviceType: jamfDeviceType, deviceId: deviceId)
     self.provider = provider
-    self.deviceID = deviceID
+    self.deviceId = deviceId
     self.deviceName = deviceName
     self.lastCheckIn = lastCheckIn
     self.jamfDeviceType = jamfDeviceType
@@ -69,10 +69,10 @@ final class MDMRecord {
   }
 
   /// Jamf IDs can sometimes overlap between mobile and computer records.
-  private static func makeID(
-    provider: MDMProvider, jamfDeviceType: JamfDeviceType?, deviceID: String
+  private static func makeId(
+    provider: MDMProvider, jamfDeviceType: JamfDeviceType?, deviceId: String
   ) -> String {
-    "\(provider.rawValue)-\(jamfDeviceType?.rawValue ?? "na")-\(deviceID)"
+    "\(provider.rawValue)-\(jamfDeviceType?.rawValue ?? "na")-\(deviceId)"
   }
 }
 

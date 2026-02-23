@@ -55,7 +55,7 @@ struct CacheRefreshButton: View {
   }
 
   private var isDisabled: Bool {
-    cacheManager.isSyncing || settings.snipeIsEnabled == false
+    cacheManager.isSyncing || settings.snipeItIsEnabled == false
   }
 
   private var helpText: String {

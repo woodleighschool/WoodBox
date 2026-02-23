@@ -1,5 +1,5 @@
 //
-//  CompNowModels.swift
+//  CompnowModels.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 8/2/2026.
@@ -7,9 +7,10 @@
 
 import Foundation
 
-// MARK: - Ticket Request/Response
+// MARK: Create Ticket
 
-struct CompNowTicket: Encodable, Sendable {
+/// Request
+struct CompnowTicketCreateRequest: Encodable, Sendable {
   let endUser: String
   let product: String
   let serial: String
@@ -28,11 +29,12 @@ struct CompNowTicket: Encodable, Sendable {
   let reference: String?
 }
 
-struct CompNowTicketCreateResponse: Decodable, Sendable {
+/// Response
+struct CompnowTicketCreateResponse: Decodable, Sendable {
   let message: String
-  let ticket: CompNowTicketResult
+  let ticket: CompnowTicket
 }
 
-struct CompNowTicketResult: Decodable, Sendable {
+struct CompnowTicket: Decodable, Sendable {
   let ticketId: String
 }

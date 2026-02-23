@@ -1,5 +1,5 @@
 //
-//  CompNowClient.swift
+//  CompnowClient.swift
 //  WoodBox
 //
 //  Created by Alexander Hyde on 8/2/2026.
@@ -7,14 +7,15 @@
 
 import Foundation
 
-struct CompNowClient: Sendable {
-  // MARK: - Types
-
-  private static let defaultBaseURL = URL(string: "https://test-api.compnow.com.au/request")!
-
+struct CompnowClient: Sendable {
   // MARK: - Properties
 
-  private let baseURL: URL
+  #if DEBUG
+    private static let baseURL = URL(string: "https://test-api.compnow.com.au/request")!
+  #else
+    private static let baseURL = URL(string: "https://prod-api.compnow.com.au/request")!
+  #endif
+
   private let apiKey: String
   private let username: String
   private let password: String
@@ -22,13 +23,7 @@ struct CompNowClient: Sendable {
 
   // MARK: - Init
 
-  init(
-    baseURL: URL = Self.defaultBaseURL,
-    apiKey: String,
-    username: String,
-    password: String
-  ) {
-    self.baseURL = baseURL
+  init(apiKey: String, username: String, password: String) {
     self.apiKey = apiKey
     self.username = username
     self.password = password
@@ -36,31 +31,31 @@ struct CompNowClient: Sendable {
 
   // MARK: - Public Methods
 
-  func testCompNowConnection() async throws {
+  func testCompnowConnection() async throws {
     let request = try authorizedRequest(path: "repair/ticket/all", method: "GET")
-    _ = try await http.data(for: request, action: "test connection", integration: "CompNow")
+    _ = try await http.data(for: request, action: "test connection", integration: "Compnow")
   }
 
-  func createCompNowTicket(_ ticket: CompNowTicket) async throws -> String {
+  func createCompnowTicket(_ ticket: CompnowTicketCreateRequest) async throws -> String {
     var request = try authorizedRequest(path: "repair/ticket", method: "POST")
     request.httpBody = try JSONEncoder().encode(ticket)
 
     let response = try await http.decode(
-      CompNowTicketCreateResponse.self,
+      CompnowTicketCreateResponse.self,
       from: request,
       action: "create ticket",
-      integration: "CompNow"
+      integration: "Compnow"
     )
-    let ticketID = response.ticket.ticketId
+    let ticketId = response.ticket.ticketId
 
-    guard !ticketID.isEmpty else { throw URLError(.badServerResponse) }
-    return ticketID
+    guard !ticketId.isEmpty else { throw URLError(.badServerResponse) }
+    return ticketId
   }
 
   // MARK: - Private Helpers
 
   private func authorizedRequest(path: String, method: String) throws -> URLRequest {
-    let url = baseURL.appending(path: path)
+    let url = Self.baseURL.appending(path: path)
 
     var request = URLRequest(url: url)
     request.httpMethod = method

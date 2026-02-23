@@ -7,7 +7,6 @@
 
 import SwiftData
 import SwiftUI
-import SwiftyJSON
 
 struct RepairIntakeView: View {
   // MARK: - Properties
@@ -21,7 +20,7 @@ struct RepairIntakeView: View {
   @State private var endUserEmail = ""
   @State private var problem = ""
   @State private var notes = ""
-  @State private var createCompNowTicket = true
+  @State private var createCompnowTicket = true
   @State private var createFreshserviceTicket = true
   @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
@@ -40,7 +39,9 @@ struct RepairIntakeView: View {
       Section {
         TextField("Problem", text: $problem, prompt: Text("e.g. Broken Screen"))
 
-        SparePicker(spareStatusID: modelData.settings.snipeSpareStatusID, selection: $selectedSpare)
+        SparePicker(
+          spareStatusId: modelData.settings.snipeItSpareStatusId, selection: $selectedSpare
+        )
         TextField(
           "Notes", text: $notes,
           prompt: Text(
@@ -61,16 +62,16 @@ struct RepairIntakeView: View {
       }
 
       Section {
-        Toggle(isOn: compNowToggle) {
+        Toggle(isOn: compnowToggle) {
           Label {
-            Text("Create CompNow Ticket")
+            Text("Create Compnow Ticket")
           } icon: {
             Image("compnow")
               .resizable()
               .scaledToFit()
           }
         }
-        .disabled(!modelData.settings.compNowIsEnabled)
+        .disabled(!modelData.settings.compnowIsEnabled)
 
         Toggle(isOn: freshserviceToggle) {
           Label {
@@ -118,14 +119,14 @@ struct RepairIntakeView: View {
         endUserEmail = newDevice.assignedUserEmail ?? ""
       }
     }
-    .onChange(of: modelData.settings.compNowIsEnabled) { _, isEnabled in
-      if !isEnabled { createCompNowTicket = false }
+    .onChange(of: modelData.settings.compnowIsEnabled) { _, isEnabled in
+      if !isEnabled { createCompnowTicket = false }
     }
     .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
       if !isEnabled { createFreshserviceTicket = false }
     }
     .task {
-      if !modelData.settings.compNowIsEnabled { createCompNowTicket = false }
+      if !modelData.settings.compnowIsEnabled { createCompnowTicket = false }
       if !modelData.settings.freshserviceIsEnabled { createFreshserviceTicket = false }
     }
   }
@@ -139,22 +140,22 @@ struct RepairIntakeView: View {
     alertItem = nil
 
     do {
-      var compNowTicketID: String?
+      var compnowTicketId: String?
 
-      if createCompNowTicket, let compNowClient = modelData.settings.compNowClient {
-        // Create CompNow ticket
-        let ticket = CompNowTicket(
+      if createCompnowTicket, let compnowClient = modelData.settings.compnowClient {
+        // Create Compnow ticket
+        let ticket = CompnowTicketCreateRequest(
           endUser: endUserName,
           product: device.model,
           serial: device.serial,
-          firstName: modelData.settings.compNowFirstName,
-          lastName: modelData.settings.compNowLastName,
-          address1: modelData.settings.compNowAddress,
-          suburb: modelData.settings.compNowSuburb,
-          state: modelData.settings.compNowState,
-          postcode: modelData.settings.compNowPostcode,
-          email: modelData.settings.compNowEmail,
-          phone: modelData.settings.compNowPhone,
+          firstName: modelData.settings.compnowFirstName,
+          lastName: modelData.settings.compnowLastName,
+          address1: modelData.settings.compnowAddress,
+          suburb: modelData.settings.compnowSuburb,
+          state: modelData.settings.compnowState,
+          postcode: modelData.settings.compnowPostcode,
+          email: modelData.settings.compnowEmail,
+          phone: modelData.settings.compnowPhone,
           stockCode: nil,
           extras: nil,
           fault: problem,
@@ -162,17 +163,18 @@ struct RepairIntakeView: View {
           reference: nil
         )
 
-        compNowTicketID = try await compNowClient.createCompNowTicket(ticket)
+        compnowTicketId = try await compnowClient.createCompnowTicket(ticket)
       }
 
       if createFreshserviceTicket, let freshserviceClient = modelData.settings.freshserviceClient {
         // Create Freshservice ticket
-        var customFields: JSON = ["print_label": true] // Hardcoded specific
+        var customFields: [String: JSONValue] = ["print_label": .bool(true)] // Hardcoded specific
         if let spare = selectedSpare, !modelData.settings.freshserviceSpareField.isEmpty {
-          customFields[modelData.settings.freshserviceSpareField] = JSON(spare.name!) // Assume spare name is always 'not nil'
+          customFields[modelData.settings.freshserviceSpareField] =
+            spare.name.map(JSONValue.string) ?? .null
         }
-        if let cnTicket = compNowTicketID, !modelData.settings.freshserviceCompNowField.isEmpty {
-          customFields[modelData.settings.freshserviceCompNowField] = JSON(cnTicket)
+        if let cnTicket = compnowTicketId, !modelData.settings.freshserviceCompnowField.isEmpty {
+          customFields[modelData.settings.freshserviceCompnowField] = .string(cnTicket)
         }
 
         let ticket = FreshserviceTicketRequest(
@@ -186,10 +188,10 @@ struct RepairIntakeView: View {
           category: "Hardware", // Hardcoded specific
           subCategory: "Computer", // Hardcoded specific
           itemCategory: "Mac", // Hardcoded specific
-          responderID: 120_001_544_231, // Hardcoded specific
+          responderId: 120_001_544_231, // Hardcoded specific
           tags: ["repair"], // Hardcoded specific
           customFields: customFields,
-          workspaceID: modelData.settings.freshserviceWorkspaceID
+          workspaceId: modelData.settings.freshserviceWorkspaceId
         )
 
         _ = try await freshserviceClient.createFreshserviceTicket(ticket)
@@ -211,17 +213,17 @@ struct RepairIntakeView: View {
     problem = ""
     notes = ""
     selectedSpare = nil
-    createCompNowTicket = modelData.settings.compNowIsEnabled
+    createCompnowTicket = modelData.settings.compnowIsEnabled
     createFreshserviceTicket = modelData.settings.freshserviceIsEnabled
     alertItem = nil
   }
 
   // MARK: - Toggle Bindings
 
-  private var compNowToggle: Binding<Bool> {
+  private var compnowToggle: Binding<Bool> {
     Binding(
-      get: { modelData.settings.compNowIsEnabled && createCompNowTicket },
-      set: { createCompNowTicket = $0 }
+      get: { modelData.settings.compnowIsEnabled && createCompnowTicket },
+      set: { createCompnowTicket = $0 }
     )
   }
 
@@ -239,10 +241,10 @@ private struct SparePicker: View {
   @Query private var spareDevices: [Device]
   @Binding var selection: Device?
 
-  init(spareStatusID: Int, selection: Binding<Device?>) {
+  init(spareStatusId: Int, selection: Binding<Device?>) {
     _selection = selection
     _spareDevices = Query(
-      filter: #Predicate<Device> { $0.statusID == spareStatusID },
+      filter: #Predicate<Device> { $0.statusId == spareStatusId },
       sort: \Device.name
     )
   }

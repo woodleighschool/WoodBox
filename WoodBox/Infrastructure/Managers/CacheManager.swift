@@ -51,27 +51,23 @@ final class CacheManager {
     guard !isSyncing else { return }
     status = .syncing(message: "Syncing...")
 
-    guard settings.snipeIsEnabled else {
+    guard settings.snipeItIsEnabled else {
       try? clearDeviceCache()
       markAsSynced()
       return
     }
 
     do {
-      async let snipeAssets = fetchSnipeAssets()
+      async let snipeItAssets = fetchSnipeItAssets()
       async let jamfComputers = fetchJamfComputers()
       async let jamfMobiles = fetchJamfMobileDevices()
       async let intuneDevices = fetchIntuneDevices()
 
-      let (snipe, jamfComps, jamfMobs, intune) = try await (
-        snipeAssets, jamfComputers, jamfMobiles, intuneDevices
-      )
-
       try await process(
-        snipeAssets: snipe,
-        jamfComputers: jamfComps,
-        jamfMobiles: jamfMobs,
-        intuneDevices: intune
+        snipeItAssets: snipeItAssets,
+        jamfComputers: jamfComputers,
+        jamfMobiles: jamfMobiles,
+        intuneDevices: intuneDevices
       )
 
       markAsSynced()
@@ -89,7 +85,7 @@ final class CacheManager {
   }
 
   func removeMDMRecords(for providers: Set<MDMProvider>) async {
-    guard !isSyncing, settings.snipeIsEnabled else { return }
+    guard !isSyncing, settings.snipeItIsEnabled else { return }
     status = .syncing(message: "Updating Records...")
 
     do {
@@ -110,30 +106,32 @@ final class CacheManager {
 
   // MARK: - Fetchers
 
-  private var snipeClient: SnipeITClient? {
-    guard settings.snipeIsEnabled, let url = URL(string: settings.snipeBaseURL) else { return nil }
-    return SnipeITClient(baseURL: url, apiToken: settings.snipeAPIKey)
+  private var snipeItClient: SnipeITClient? {
+    guard settings.snipeItIsEnabled, let url = URL(string: settings.snipeItBaseURL) else {
+      return nil
+    }
+    return SnipeITClient(baseURL: url, apiToken: settings.snipeItAPIKey)
   }
 
   private var jamfClient: JamfClient? {
-    guard settings.snipeIsEnabled, settings.jamfIsEnabled,
+    guard settings.snipeItIsEnabled, settings.jamfIsEnabled,
           let url = URL(string: settings.jamfBaseURL)
     else { return nil }
     return JamfClient(
-      baseURL: url, clientID: settings.jamfClientID, clientSecret: settings.jamfClientSecret
+      baseURL: url, clientId: settings.jamfClientId, clientSecret: settings.jamfClientSecret
     )
   }
 
   private var intuneClient: IntuneClient? {
-    guard settings.snipeIsEnabled, settings.intuneIsEnabled else { return nil }
+    guard settings.snipeItIsEnabled, settings.intuneIsEnabled else { return nil }
     return IntuneClient(
-      tenantID: settings.intuneTenantID, clientID: settings.intuneClientID,
+      tenantId: settings.intuneTenantId, clientId: settings.intuneClientId,
       clientSecret: settings.intuneClientSecret
     )
   }
 
-  private func fetchSnipeAssets() async throws -> [SnipeAsset] {
-    try await snipeClient?.fetchSnipeAssets() ?? []
+  private func fetchSnipeItAssets() async throws -> [SnipeItAssetResponse] {
+    try await snipeItClient?.fetchSnipeItAssets() ?? []
   }
 
   private func fetchJamfComputers() async throws -> [JamfComputer] {
@@ -151,7 +149,7 @@ final class CacheManager {
   // MARK: - Processing
 
   private func process(
-    snipeAssets: [SnipeAsset],
+    snipeItAssets: [SnipeItAssetResponse],
     jamfComputers: [JamfComputer],
     jamfMobiles: [JamfMobileDevice],
     intuneDevices: [IntuneDevice]
@@ -163,7 +161,7 @@ final class CacheManager {
     let existingDevices = try modelContext.fetch(FetchDescriptor<Device>())
     var deviceMap = Dictionary(uniqueKeysWithValues: existingDevices.map { ($0.serial, $0) })
 
-    for asset in snipeAssets {
+    for asset in snipeItAssets {
       let serial = asset.serial
 
       let device: Device
@@ -180,51 +178,56 @@ final class CacheManager {
       device.model = asset.model.name
       device.category = asset.category?.name.nilIfEmpty
       device.status = asset.statusLabel?.name.nilIfEmpty
-      device.statusID = asset.statusLabel?.id
-      device.snipeID = asset.id
+      device.statusId = asset.statusLabel?.id
+      device.snipeItId = asset.id
       device.notes = asset.notes.nilIfEmpty
       device.assignedUserName = asset.assignedTo?.name.nilIfEmpty
       device.assignedUserEmail = asset.assignedTo?.email.nilIfEmpty
-      device.warrantyExpires = asset.warrantyExpires?.date
+      device.warrantyExpires = asset.warrantyExpires?.date.flatMap {
+        try? Date($0, strategy: .iso8601)
+      }
 
       // Refresh MDM records
       for record in device.mdmRecords {
         modelContext.delete(record)
       }
 
-      let records: [MDMRecord] =
-        (jamfComputerMap[serial] ?? []).map {
-          MDMRecord(
-            provider: .jamf,
-            deviceID: $0.id,
-            deviceName: $0.general?.name.nilIfEmpty,
-            lastCheckIn: $0.general?.lastContactTime.flatMap { try? Date($0, strategy: .iso8601) },
-            jamfDeviceType: .computer,
-            device: device
-          )
-        }
-        + (jamfMobileMap[serial] ?? []).map {
-          MDMRecord(
-            provider: .jamf,
-            deviceID: $0.mobileDeviceId,
-            deviceName: $0.displayName.nilIfEmpty,
-            lastCheckIn: $0.general?.lastInventoryUpdateDate.flatMap {
-              try? Date($0, strategy: .iso8601)
-            },
-            jamfDeviceType: .mobile,
-            device: device
-          )
-        }
-        + (intuneMap[serial] ?? []).map {
-          MDMRecord(
-            provider: .intune,
-            deviceID: $0.id,
-            deviceName: $0.deviceName.nilIfEmpty,
-            lastCheckIn: $0.lastSyncDateTime.flatMap { try? Date($0, strategy: .iso8601) },
-            jamfDeviceType: nil,
-            device: device
-          )
-        }
+      let jamfComputerRecords: [MDMRecord] = (jamfComputerMap[serial] ?? []).map {
+        MDMRecord(
+          provider: .jamf,
+          deviceId: $0.id,
+          deviceName: $0.general.name.nilIfEmpty,
+          lastCheckIn: $0.general.lastContactTime.flatMap { try? Date($0, strategy: .iso8601) },
+          jamfDeviceType: .computer,
+          device: device
+        )
+      }
+
+      let jamfMobileRecords: [MDMRecord] = (jamfMobileMap[serial] ?? []).map {
+        MDMRecord(
+          provider: .jamf,
+          deviceId: $0.mobileDeviceId,
+          deviceName: $0.displayName.nilIfEmpty,
+          lastCheckIn: $0.general.lastInventoryUpdateDate.flatMap {
+            try? Date($0, strategy: .iso8601)
+          },
+          jamfDeviceType: .mobile,
+          device: device
+        )
+      }
+
+      let intuneRecords: [MDMRecord] = (intuneMap[serial] ?? []).map {
+        MDMRecord(
+          provider: .intune,
+          deviceId: $0.id,
+          deviceName: $0.deviceName.nilIfEmpty,
+          lastCheckIn: $0.lastSyncDateTime.flatMap { try? Date($0, strategy: .iso8601) },
+          jamfDeviceType: nil,
+          device: device
+        )
+      }
+
+      let records = jamfComputerRecords + jamfMobileRecords + intuneRecords
 
       for record in records {
         modelContext.insert(record)
@@ -244,7 +247,7 @@ final class CacheManager {
   }
 
   private func clearDeviceCache() throws {
-    try modelContext.delete(model: Device.self) // Much faster than fetching and looping
+    try modelContext.delete(model: Device.self)
     try modelContext.save()
   }
 }

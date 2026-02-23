@@ -114,9 +114,9 @@ struct DuplicateGroupSection: View {
 
   var body: some View {
     Section {
-      let latestID = sortedRecords.first?.id
+      let latestId = sortedRecords.first?.id
       ForEach(sortedRecords, id: \.id) { record in
-        DuplicateRecordRow(record: record, isLatest: record.id == latestID, settings: settings) {
+        DuplicateRecordRow(record: record, isLatest: record.id == latestId, settings: settings) {
           onDelete(record)
         }
         .contentTransition(.opacity)
@@ -156,7 +156,7 @@ struct DuplicateRecordRow: View {
             .font(.body.weight(.medium))
             .lineLimit(1)
 
-          Text("\(record.deviceID)")
+          Text("\(record.deviceId)")
             .font(.caption.monospaced())
             .foregroundStyle(.secondary)
             .lineLimit(1)
@@ -191,11 +191,11 @@ struct DuplicateRecordRow: View {
     case .intune:
       return URL(
         string:
-        "https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/\(record.deviceID)"
+        "https://intune.microsoft.com/#view/Microsoft_Intune_Devices/DeviceSettingsMenuBlade/~/overview/mdmDeviceId/\(record.deviceId)"
       )
     case .jamf:
       let endpoint = record.jamfDeviceType == .mobile ? "mobileDevices.html" : "computers.html"
-      return URL(string: "\(settings.jamfBaseURL)/\(endpoint)?id=\(record.deviceID)")
+      return URL(string: "\(settings.jamfBaseURL)/\(endpoint)?id=\(record.deviceId)")
     }
   }
 }

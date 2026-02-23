@@ -6,10 +6,10 @@
 //
 
 import Foundation
-import SwiftyJSON
 
-// MARK: - Ticket Request/Response
+// MARK: Create Ticket
 
+/// Request
 struct FreshserviceTicketRequest: Encodable, Sendable {
   let email: String
   let subject: String
@@ -21,23 +21,29 @@ struct FreshserviceTicketRequest: Encodable, Sendable {
   let category: String?
   let subCategory: String?
   let itemCategory: String?
-  let responderID: Int?
+  let responderId: Int?
   let tags: [String]?
-  let customFields: JSON?
-  let workspaceID: Int?
+  let customFields: [String: JSONValue]?
+  let workspaceId: Int?
 
   enum CodingKeys: String, CodingKey {
-    case email, subject, description, status, priority, urgency, impact, category, tags
-    case subCategory = "sub_category"
-    case itemCategory = "item_category"
-    case responderID = "responder_id"
+    case category
     case customFields = "custom_fields"
-    case workspaceID = "workspace_id"
+    case description
+    case email
+    case impact
+    case itemCategory = "item_category"
+    case priority
+    case responderId = "responder_id"
+    case status
+    case subCategory = "sub_category"
+    case tags
+    case urgency
+    case workspaceId = "workspace_id"
   }
 }
 
-// MARK: - Ticket Response
-
+/// Response
 struct FreshserviceTicketResponse: Decodable, Sendable {
   let ticket: FreshserviceTicket
 }
@@ -46,8 +52,7 @@ struct FreshserviceTicket: Decodable, Sendable {
   let id: Int
 }
 
-// MARK: - Ticket enums
-
+/// Misc
 enum FreshserviceTicketStatus: Int, Codable, Sendable {
   case open = 2
   case pending = 3
@@ -62,32 +67,32 @@ enum FreshserviceTicketPriority: Int, Codable, Sendable {
   case urgent = 4
 }
 
-// MARK: - Service Request / Response
+// MARK: Service Requests
 
-struct FreshserviceServiceRequest: Encodable, Sendable {
-  let serviceItemDisplayID: Int // used for URL path, not encoded
+/// Request
+struct FreshserviceServiceRequestCreateRequest: Encodable, Sendable {
   let email: String
   let quantity: Int = 1
-  let customFields: [String: String]?
-  let workspaceID: Int?
+  let customFields: [String: JSONValue]?
+  let workspaceId: Int?
 
   enum CodingKeys: String, CodingKey {
+    case customFields = "custom_fields"
     case email
     case quantity
-    case customFields = "custom_fields"
-    case workspaceID = "workspace_id"
-    // serviceItemDisplayID intentionally omitted — used for URL path only
+    case workspaceId = "workspace_id"
   }
 }
 
-struct FreshserviceServiceRequestResponse: Decodable, Sendable {
-  let serviceRequest: FreshserviceServiceRequestResult
+/// Response
+struct FreshserviceServiceRequestCreateResponse: Decodable, Sendable {
+  let serviceRequest: FreshserviceServiceRequest
 
   enum CodingKeys: String, CodingKey {
     case serviceRequest = "service_request"
   }
 }
 
-struct FreshserviceServiceRequestResult: Decodable, Sendable {
+struct FreshserviceServiceRequest: Decodable, Sendable {
   let id: Int
 }

@@ -18,51 +18,51 @@ final class AppSettings {
 
   // MARK: - Snipe-IT
 
-  var snipeIsEnabled: Bool {
+  var snipeItIsEnabled: Bool {
     didSet {
-      UserDefaults.standard.set(snipeIsEnabled, forKey: "snipeIsEnabled")
+      UserDefaults.standard.set(snipeItIsEnabled, forKey: "snipeItIsEnabled")
     }
   }
 
-  var snipeBaseURL: String {
+  var snipeItBaseURL: String {
     didSet {
-      UserDefaults.standard.set(snipeBaseURL, forKey: "snipeBaseURL")
+      UserDefaults.standard.set(snipeItBaseURL, forKey: "snipeItBaseURL")
     }
   }
 
-  var snipeAPIKey: String {
+  var snipeItAPIKey: String {
     didSet {
-      KeychainHelper.shared.save(snipeAPIKey, key: "snipeAPIKey")
+      KeychainHelper.shared.save(snipeItAPIKey, key: "snipeItAPIKey")
     }
   }
 
-  var snipeForSaleStatusID: Int {
+  var snipeItForSaleStatusId: Int {
     didSet {
-      UserDefaults.standard.set(snipeForSaleStatusID, forKey: "snipeForSaleStatusID")
+      UserDefaults.standard.set(snipeItForSaleStatusId, forKey: "snipeItForSaleStatusId")
     }
   }
 
-  var snipeDeployableStatusID: Int {
+  var snipeItDeployableStatusId: Int {
     didSet {
-      UserDefaults.standard.set(snipeDeployableStatusID, forKey: "snipeDeployableStatusID")
+      UserDefaults.standard.set(snipeItDeployableStatusId, forKey: "snipeItDeployableStatusId")
     }
   }
 
-  var snipeSpareStatusID: Int {
+  var snipeItSpareStatusId: Int {
     didSet {
-      UserDefaults.standard.set(snipeSpareStatusID, forKey: "snipeSpareStatusID")
+      UserDefaults.standard.set(snipeItSpareStatusId, forKey: "snipeItSpareStatusId")
     }
   }
 
-  var snipeConditionField: String {
+  var snipeItConditionField: String {
     didSet {
-      UserDefaults.standard.set(snipeConditionField, forKey: "snipeConditionField")
+      UserDefaults.standard.set(snipeItConditionField, forKey: "snipeItConditionField")
     }
   }
 
-  var snipeConditionNotesField: String {
+  var snipeItConditionNotesField: String {
     didSet {
-      UserDefaults.standard.set(snipeConditionNotesField, forKey: "snipeConditionNotesField")
+      UserDefaults.standard.set(snipeItConditionNotesField, forKey: "snipeItConditionNotesField")
     }
   }
 
@@ -80,9 +80,9 @@ final class AppSettings {
     }
   }
 
-  var jamfClientID: String {
+  var jamfClientId: String {
     didSet {
-      UserDefaults.standard.set(jamfClientID, forKey: "jamfClientID")
+      UserDefaults.standard.set(jamfClientId, forKey: "jamfClientId")
     }
   }
 
@@ -100,15 +100,15 @@ final class AppSettings {
     }
   }
 
-  var intuneTenantID: String {
+  var intuneTenantId: String {
     didSet {
-      UserDefaults.standard.set(intuneTenantID, forKey: "intuneTenantID")
+      UserDefaults.standard.set(intuneTenantId, forKey: "intuneTenantId")
     }
   }
 
-  var intuneClientID: String {
+  var intuneClientId: String {
     didSet {
-      UserDefaults.standard.set(intuneClientID, forKey: "intuneClientID")
+      UserDefaults.standard.set(intuneClientId, forKey: "intuneClientId")
     }
   }
 
@@ -138,16 +138,16 @@ final class AppSettings {
     }
   }
 
-  var freshserviceWorkspaceID: Int {
+  var freshserviceWorkspaceId: Int {
     didSet {
-      UserDefaults.standard.set(freshserviceWorkspaceID, forKey: "freshserviceWorkspaceID")
+      UserDefaults.standard.set(freshserviceWorkspaceId, forKey: "freshserviceWorkspaceId")
     }
   }
 
-  var freshserviceReturnedMachineServiceItemID: Int {
+  var freshserviceReturnedMachineServiceItemId: Int {
     didSet {
       UserDefaults.standard.set(
-        freshserviceReturnedMachineServiceItemID, forKey: "freshserviceReturnedMachineServiceItemID"
+        freshserviceReturnedMachineServiceItemId, forKey: "freshserviceReturnedMachineServiceItemId"
       )
     }
   }
@@ -182,85 +182,85 @@ final class AppSettings {
     }
   }
 
-  var freshserviceCompNowField: String {
+  var freshserviceCompnowField: String {
     didSet {
-      UserDefaults.standard.set(freshserviceCompNowField, forKey: "freshserviceCompNowField")
+      UserDefaults.standard.set(freshserviceCompnowField, forKey: "freshserviceCompnowField")
     }
   }
 
-  // MARK: - CompNow
+  // MARK: - Compnow
 
-  var compNowIsEnabled: Bool {
+  var compnowIsEnabled: Bool {
     didSet {
-      UserDefaults.standard.set(compNowIsEnabled, forKey: "compNowIsEnabled")
+      UserDefaults.standard.set(compnowIsEnabled, forKey: "compnowIsEnabled")
     }
   }
 
-  var compNowUsername: String {
+  var compnowUsername: String {
     didSet {
-      UserDefaults.standard.set(compNowUsername, forKey: "compNowUsername")
+      UserDefaults.standard.set(compnowUsername, forKey: "compnowUsername")
     }
   }
 
-  var compNowPassword: String {
+  var compnowPassword: String {
     didSet {
-      KeychainHelper.shared.save(compNowPassword, key: "compNowPassword")
+      KeychainHelper.shared.save(compnowPassword, key: "compnowPassword")
     }
   }
 
-  var compNowAPIKey: String {
+  var compnowAPIKey: String {
     didSet {
-      KeychainHelper.shared.save(compNowAPIKey, key: "compNowAPIKey")
+      KeychainHelper.shared.save(compnowAPIKey, key: "compnowAPIKey")
     }
   }
 
-  // MARK: - CompNow Defaults
+  // MARK: - Compnow Defaults
 
-  var compNowFirstName: String {
+  var compnowFirstName: String {
     didSet {
-      UserDefaults.standard.set(compNowFirstName, forKey: "compNowFirstName")
+      UserDefaults.standard.set(compnowFirstName, forKey: "compnowFirstName")
     }
   }
 
-  var compNowLastName: String {
+  var compnowLastName: String {
     didSet {
-      UserDefaults.standard.set(compNowLastName, forKey: "compNowLastName")
+      UserDefaults.standard.set(compnowLastName, forKey: "compnowLastName")
     }
   }
 
-  var compNowAddress: String {
+  var compnowAddress: String {
     didSet {
-      UserDefaults.standard.set(compNowAddress, forKey: "compNowAddress")
+      UserDefaults.standard.set(compnowAddress, forKey: "compnowAddress")
     }
   }
 
-  var compNowSuburb: String {
+  var compnowSuburb: String {
     didSet {
-      UserDefaults.standard.set(compNowSuburb, forKey: "compNowSuburb")
+      UserDefaults.standard.set(compnowSuburb, forKey: "compnowSuburb")
     }
   }
 
-  var compNowState: String {
+  var compnowState: String {
     didSet {
-      UserDefaults.standard.set(compNowState, forKey: "compNowState")
+      UserDefaults.standard.set(compnowState, forKey: "compnowState")
     }
   }
 
-  var compNowPostcode: String {
+  var compnowPostcode: String {
     didSet {
-      UserDefaults.standard.set(compNowPostcode, forKey: "compNowPostcode")
+      UserDefaults.standard.set(compnowPostcode, forKey: "compnowPostcode")
     }
   }
 
-  var compNowEmail: String {
+  var compnowEmail: String {
     didSet {
-      UserDefaults.standard.set(compNowEmail, forKey: "compNowEmail")
+      UserDefaults.standard.set(compnowEmail, forKey: "compnowEmail")
     }
   }
 
-  var compNowPhone: String {
+  var compnowPhone: String {
     didSet {
-      UserDefaults.standard.set(compNowPhone, forKey: "compNowPhone")
+      UserDefaults.standard.set(compnowPhone, forKey: "compnowPhone")
     }
   }
 
@@ -275,38 +275,38 @@ final class AppSettings {
 
     let keychain = KeychainHelper.shared
 
-    snipeIsEnabled = UserDefaults.standard.bool(forKey: "snipeIsEnabled")
-    snipeBaseURL = UserDefaults.standard.string(forKey: "snipeBaseURL") ?? ""
-    snipeAPIKey = keychain.read(key: "snipeAPIKey") ?? ""
-    snipeForSaleStatusID = UserDefaults.standard.integer(forKey: "snipeForSaleStatusID")
-    snipeDeployableStatusID = UserDefaults.standard.integer(forKey: "snipeDeployableStatusID")
-    snipeSpareStatusID = UserDefaults.standard.integer(forKey: "snipeSpareStatusID")
-    snipeConditionField =
-      UserDefaults.standard.string(forKey: "snipeConditionField")
-        ?? UserDefaults.standard.string(forKey: "snipeConditionFieldKey")
+    snipeItIsEnabled = UserDefaults.standard.bool(forKey: "snipeItIsEnabled")
+    snipeItBaseURL = UserDefaults.standard.string(forKey: "snipeItBaseURL") ?? ""
+    snipeItAPIKey = keychain.read(key: "snipeItAPIKey") ?? ""
+    snipeItForSaleStatusId = UserDefaults.standard.integer(forKey: "snipeItForSaleStatusId")
+    snipeItDeployableStatusId = UserDefaults.standard.integer(forKey: "snipeItDeployableStatusId")
+    snipeItSpareStatusId = UserDefaults.standard.integer(forKey: "snipeItSpareStatusId")
+    snipeItConditionField =
+      UserDefaults.standard.string(forKey: "snipeItConditionField")
+        ?? UserDefaults.standard.string(forKey: "snipeItConditionFieldKey")
         ?? ""
-    snipeConditionNotesField =
-      UserDefaults.standard.string(forKey: "snipeConditionNotesField")
-        ?? UserDefaults.standard.string(forKey: "snipeConditionNotesFieldKey")
-        ?? UserDefaults.standard.string(forKey: "snipeNotesFieldKey")
+    snipeItConditionNotesField =
+      UserDefaults.standard.string(forKey: "snipeItConditionNotesField")
+        ?? UserDefaults.standard.string(forKey: "snipeItConditionNotesFieldKey")
+        ?? UserDefaults.standard.string(forKey: "snipeItNotesFieldKey")
         ?? ""
 
     jamfIsEnabled = UserDefaults.standard.bool(forKey: "jamfIsEnabled")
     jamfBaseURL = UserDefaults.standard.string(forKey: "jamfBaseURL") ?? ""
-    jamfClientID = UserDefaults.standard.string(forKey: "jamfClientID") ?? ""
+    jamfClientId = UserDefaults.standard.string(forKey: "jamfClientId") ?? ""
     jamfClientSecret = keychain.read(key: "jamfClientSecret") ?? ""
 
     intuneIsEnabled = UserDefaults.standard.bool(forKey: "intuneIsEnabled")
-    intuneTenantID = UserDefaults.standard.string(forKey: "intuneTenantID") ?? ""
-    intuneClientID = UserDefaults.standard.string(forKey: "intuneClientID") ?? ""
+    intuneTenantId = UserDefaults.standard.string(forKey: "intuneTenantId") ?? ""
+    intuneClientId = UserDefaults.standard.string(forKey: "intuneClientId") ?? ""
     intuneClientSecret = keychain.read(key: "intuneClientSecret") ?? ""
 
     freshserviceIsEnabled = UserDefaults.standard.bool(forKey: "freshserviceIsEnabled")
     freshserviceBaseURL = UserDefaults.standard.string(forKey: "freshserviceBaseURL") ?? ""
     freshserviceAPIKey = keychain.read(key: "freshserviceAPIKey") ?? ""
-    freshserviceWorkspaceID = UserDefaults.standard.integer(forKey: "freshserviceWorkspaceID")
-    freshserviceReturnedMachineServiceItemID = UserDefaults.standard.integer(
-      forKey: "freshserviceReturnedMachineServiceItemID"
+    freshserviceWorkspaceId = UserDefaults.standard.integer(forKey: "freshserviceWorkspaceId")
+    freshserviceReturnedMachineServiceItemId = UserDefaults.standard.integer(
+      forKey: "freshserviceReturnedMachineServiceItemId"
     )
     freshserviceReturnConditionField =
       UserDefaults.standard.string(forKey: "freshserviceReturnConditionField") ?? ""
@@ -315,34 +315,34 @@ final class AppSettings {
     freshserviceReturnNotesField =
       UserDefaults.standard.string(forKey: "freshserviceReturnNotesField") ?? ""
     freshserviceSpareField = UserDefaults.standard.string(forKey: "freshserviceSpareField") ?? ""
-    freshserviceCompNowField =
-      UserDefaults.standard.string(forKey: "freshserviceCompNowField") ?? ""
+    freshserviceCompnowField =
+      UserDefaults.standard.string(forKey: "freshserviceCompnowField") ?? ""
 
-    compNowIsEnabled = UserDefaults.standard.bool(forKey: "compNowIsEnabled")
-    compNowUsername = UserDefaults.standard.string(forKey: "compNowUsername") ?? ""
-    compNowPassword = keychain.read(key: "compNowPassword") ?? ""
-    compNowAPIKey = keychain.read(key: "compNowAPIKey") ?? ""
+    compnowIsEnabled = UserDefaults.standard.bool(forKey: "compnowIsEnabled")
+    compnowUsername = UserDefaults.standard.string(forKey: "compnowUsername") ?? ""
+    compnowPassword = keychain.read(key: "compnowPassword") ?? ""
+    compnowAPIKey = keychain.read(key: "compnowAPIKey") ?? ""
 
-    compNowFirstName = UserDefaults.standard.string(forKey: "compNowFirstName") ?? ""
-    compNowLastName = UserDefaults.standard.string(forKey: "compNowLastName") ?? ""
-    compNowAddress = UserDefaults.standard.string(forKey: "compNowAddress") ?? ""
-    compNowSuburb = UserDefaults.standard.string(forKey: "compNowSuburb") ?? ""
-    compNowState = UserDefaults.standard.string(forKey: "compNowState") ?? ""
-    compNowPostcode = UserDefaults.standard.string(forKey: "compNowPostcode") ?? ""
-    compNowEmail = UserDefaults.standard.string(forKey: "compNowEmail") ?? ""
-    compNowPhone = UserDefaults.standard.string(forKey: "compNowPhone") ?? ""
+    compnowFirstName = UserDefaults.standard.string(forKey: "compnowFirstName") ?? ""
+    compnowLastName = UserDefaults.standard.string(forKey: "compnowLastName") ?? ""
+    compnowAddress = UserDefaults.standard.string(forKey: "compnowAddress") ?? ""
+    compnowSuburb = UserDefaults.standard.string(forKey: "compnowSuburb") ?? ""
+    compnowState = UserDefaults.standard.string(forKey: "compnowState") ?? ""
+    compnowPostcode = UserDefaults.standard.string(forKey: "compnowPostcode") ?? ""
+    compnowEmail = UserDefaults.standard.string(forKey: "compnowEmail") ?? ""
+    compnowPhone = UserDefaults.standard.string(forKey: "compnowPhone") ?? ""
   }
 }
 
 // MARK: - Client Helpers
 
 extension AppSettings {
-  var compNowClient: CompNowClient? {
-    guard compNowIsEnabled else { return nil }
-    return CompNowClient(
-      apiKey: compNowAPIKey,
-      username: compNowUsername,
-      password: compNowPassword
+  var compnowClient: CompnowClient? {
+    guard compnowIsEnabled else { return nil }
+    return CompnowClient(
+      apiKey: compnowAPIKey,
+      username: compnowUsername,
+      password: compnowPassword
     )
   }
 
@@ -351,21 +351,21 @@ extension AppSettings {
     return FreshserviceClient(baseURL: url, apiKey: freshserviceAPIKey)
   }
 
-  var snipeClient: SnipeITClient? {
-    guard snipeIsEnabled, let url = URL(string: snipeBaseURL) else { return nil }
-    return SnipeITClient(baseURL: url, apiToken: snipeAPIKey)
+  var snipeItClient: SnipeITClient? {
+    guard snipeItIsEnabled, let url = URL(string: snipeItBaseURL) else { return nil }
+    return SnipeITClient(baseURL: url, apiToken: snipeItAPIKey)
   }
 
   var jamfClient: JamfClient? {
     guard jamfIsEnabled, let url = URL(string: jamfBaseURL) else { return nil }
-    return JamfClient(baseURL: url, clientID: jamfClientID, clientSecret: jamfClientSecret)
+    return JamfClient(baseURL: url, clientId: jamfClientId, clientSecret: jamfClientSecret)
   }
 
   var intuneClient: IntuneClient? {
     guard intuneIsEnabled else { return nil }
     return IntuneClient(
-      tenantID: intuneTenantID,
-      clientID: intuneClientID,
+      tenantId: intuneTenantId,
+      clientId: intuneClientId,
       clientSecret: intuneClientSecret
     )
   }

@@ -15,7 +15,7 @@ private enum ConnectionTestResult: Equatable {
 }
 
 private enum SettingsSection: CaseIterable, Identifiable {
-  case snipe
+  case snipeIt
   case jamf
   case intune
   case freshservice
@@ -27,17 +27,17 @@ private enum SettingsSection: CaseIterable, Identifiable {
 
   var title: String {
     switch self {
-    case .snipe: "Snipe-IT"
+    case .snipeIt: "Snipe-IT"
     case .jamf: "Jamf"
     case .intune: "Intune"
     case .freshservice: "Freshservice"
-    case .compnow: "CompNow"
+    case .compnow: "Compnow"
     }
   }
 
   var systemImage: String {
     switch self {
-    case .snipe: "server.rack"
+    case .snipeIt: "server.rack"
     case .jamf: "laptopcomputer"
     case .intune: "window.ceiling"
     case .freshservice: "person.crop.circle.badge.questionmark"
@@ -58,9 +58,9 @@ struct SettingsView: View {
   var body: some View {
     #if os(macOS)
       TabView {
-        settingsDestination(.snipe)
+        settingsDestination(.snipeIt)
           .tabItem {
-            Label(SettingsSection.snipe.title, systemImage: SettingsSection.snipe.systemImage)
+            Label(SettingsSection.snipeIt.title, systemImage: SettingsSection.snipeIt.systemImage)
           }
 
         settingsDestination(.jamf)
@@ -105,8 +105,8 @@ struct SettingsView: View {
   @ViewBuilder
   private func settingsDestination(_ section: SettingsSection) -> some View {
     switch section {
-    case .snipe:
-      SnipeSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
+    case .snipeIt:
+      SnipeItSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
     case .jamf:
       JamfSettingsView(settings: modelData.settings, cacheManager: modelData.cacheManager)
     case .intune:
@@ -114,14 +114,14 @@ struct SettingsView: View {
     case .freshservice:
       FreshserviceSettingsView(settings: modelData.settings)
     case .compnow:
-      CompNowSettingsView(settings: modelData.settings)
+      CompnowSettingsView(settings: modelData.settings)
     }
   }
 }
 
 // MARK: - Subviews
 
-struct SnipeSettingsView: View {
+struct SnipeItSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
@@ -135,8 +135,8 @@ struct SnipeSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.snipeIsEnabled)
-          .onChange(of: settings.snipeIsEnabled) { _, isOn in
+        Toggle("Enabled", isOn: $settings.snipeItIsEnabled)
+          .onChange(of: settings.snipeItIsEnabled) { _, isOn in
             Task {
               if isOn {
                 await cacheManager.sync()
@@ -148,20 +148,22 @@ struct SnipeSettingsView: View {
             }
           }
 
-        TextField("Base URL", text: $settings.snipeBaseURL)
-        SecureField("API Key", text: $settings.snipeAPIKey)
+        TextField("Base URL", text: $settings.snipeItBaseURL)
+        SecureField("API Key", text: $settings.snipeItAPIKey)
 
-        testRow(disabled: settings.snipeBaseURL.isEmpty) {
+        testRow(disabled: settings.snipeItBaseURL.isEmpty) {
           await testConnection()
         }
       }
 
       Section("Configuration") {
-        TextField("Deployable Status ID", value: $settings.snipeDeployableStatusID, format: .number)
-        TextField("For Sale Status ID", value: $settings.snipeForSaleStatusID, format: .number)
-        TextField("Spare Status ID", value: $settings.snipeSpareStatusID, format: .number)
-        TextField("Condition Custom Field", text: $settings.snipeConditionField)
-        TextField("Condition Notes Custom Field", text: $settings.snipeConditionNotesField)
+        TextField(
+          "Deployable Status ID", value: $settings.snipeItDeployableStatusId, format: .number
+        )
+        TextField("For Sale Status ID", value: $settings.snipeItForSaleStatusId, format: .number)
+        TextField("Spare Status ID", value: $settings.snipeItSpareStatusId, format: .number)
+        TextField("Condition Custom Field", text: $settings.snipeItConditionField)
+        TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
       }
     }
     .formStyle(.grouped)
@@ -173,14 +175,14 @@ struct SnipeSettingsView: View {
     testResult = nil
     defer { isTesting = false }
 
-    guard let url = URL(string: settings.snipeBaseURL) else {
+    guard let url = URL(string: settings.snipeItBaseURL) else {
       testResult = .failure("Invalid URL")
       return
     }
 
-    let client = SnipeITClient(baseURL: url, apiToken: settings.snipeAPIKey)
+    let client = SnipeITClient(baseURL: url, apiToken: settings.snipeItAPIKey)
     do {
-      try await client.testSnipeConnection()
+      try await client.testSnipeItConnection()
       testResult = .success
     } catch {
       testResult = .failure("Failed: \(error.localizedDescription)")
@@ -226,7 +228,7 @@ struct JamfSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.jamfIsEnabled)
-          .disabled(settings.snipeIsEnabled == false)
+          .disabled(settings.snipeItIsEnabled == false)
           .onChange(of: settings.jamfIsEnabled) { _, isOn in
             Task {
               if isOn {
@@ -238,15 +240,15 @@ struct JamfSettingsView: View {
           }
 
         TextField("Base URL", text: $settings.jamfBaseURL)
-        TextField("Client ID", text: $settings.jamfClientID)
+        TextField("Client ID", text: $settings.jamfClientId)
         SecureField("Client Secret", text: $settings.jamfClientSecret)
 
         testRow(disabled: settings.jamfBaseURL.isEmpty) {
           await testConnection()
         }
 
-        if settings.snipeIsEnabled == false {
-          Text("Enable Snipe-IT first; Jamf only augments cached Snipe devices.")
+        if settings.snipeItIsEnabled == false {
+          Text("Enable Snipe-IT first; Jamf only augments cached Snipe-IT devices.")
             .font(.caption2)
             .foregroundStyle(.secondary)
         }
@@ -270,7 +272,7 @@ struct JamfSettingsView: View {
 
     let client = JamfClient(
       baseURL: url,
-      clientID: settings.jamfClientID,
+      clientId: settings.jamfClientId,
       clientSecret: settings.jamfClientSecret
     )
     do {
@@ -320,7 +322,7 @@ struct IntuneSettingsView: View {
     Form {
       Section("Credentials") {
         Toggle("Enabled", isOn: $settings.intuneIsEnabled)
-          .disabled(settings.snipeIsEnabled == false)
+          .disabled(settings.snipeItIsEnabled == false)
           .onChange(of: settings.intuneIsEnabled) { _, isOn in
             Task {
               if isOn {
@@ -331,16 +333,16 @@ struct IntuneSettingsView: View {
             }
           }
 
-        TextField("Tenant ID", text: $settings.intuneTenantID)
-        TextField("Client ID", text: $settings.intuneClientID)
+        TextField("Tenant ID", text: $settings.intuneTenantId)
+        TextField("Client ID", text: $settings.intuneClientId)
         SecureField("Client Secret", text: $settings.intuneClientSecret)
 
         testRow {
           await testConnection()
         }
 
-        if settings.snipeIsEnabled == false {
-          Text("Enable Snipe-IT first; Intune only augments cached Snipe devices.")
+        if settings.snipeItIsEnabled == false {
+          Text("Enable Snipe-IT first; Intune only augments cached Snipe-IT devices.")
             .font(.caption2)
             .foregroundStyle(.secondary)
         }
@@ -358,8 +360,8 @@ struct IntuneSettingsView: View {
     defer { isTesting = false }
 
     let client = IntuneClient(
-      tenantID: settings.intuneTenantID,
-      clientID: settings.intuneClientID,
+      tenantId: settings.intuneTenantId,
+      clientId: settings.intuneClientId,
       clientSecret: settings.intuneClientSecret
     )
 
@@ -418,17 +420,17 @@ struct FreshserviceSettingsView: View {
       }
 
       Section("Configuration") {
-        TextField("Workspace ID", value: $settings.freshserviceWorkspaceID, format: .number)
+        TextField("Workspace ID", value: $settings.freshserviceWorkspaceId, format: .number)
         TextField(
           "Return Service Item ID",
-          value: $settings.freshserviceReturnedMachineServiceItemID,
+          value: $settings.freshserviceReturnedMachineServiceItemId,
           format: .number
         )
         TextField("Return Condition Field", text: $settings.freshserviceReturnConditionField)
         TextField("Return Charger Field", text: $settings.freshserviceReturnChargerField)
         TextField("Return Notes Field", text: $settings.freshserviceReturnNotesField)
         TextField("Spare Field", text: $settings.freshserviceSpareField)
-        TextField("CompNow Ticket Field", text: $settings.freshserviceCompNowField)
+        TextField("Compnow Ticket Field", text: $settings.freshserviceCompnowField)
       }
     }
     .formStyle(.grouped)
@@ -480,7 +482,7 @@ struct FreshserviceSettingsView: View {
   }
 }
 
-struct CompNowSettingsView: View {
+struct CompnowSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
@@ -493,10 +495,10 @@ struct CompNowSettingsView: View {
   var body: some View {
     Form {
       Section("Credentials") {
-        Toggle("Enabled", isOn: $settings.compNowIsEnabled)
-        TextField("Username", text: $settings.compNowUsername)
-        SecureField("Password", text: $settings.compNowPassword)
-        SecureField("API Key", text: $settings.compNowAPIKey)
+        Toggle("Enabled", isOn: $settings.compnowIsEnabled)
+        TextField("Username", text: $settings.compnowUsername)
+        SecureField("Password", text: $settings.compnowPassword)
+        SecureField("API Key", text: $settings.compnowAPIKey)
 
         testRow {
           await testConnection()
@@ -504,14 +506,14 @@ struct CompNowSettingsView: View {
       }
 
       Section("End User Details") {
-        TextField("First Name", text: $settings.compNowFirstName)
-        TextField("Last Name", text: $settings.compNowLastName)
-        TextField("Address", text: $settings.compNowAddress)
-        TextField("Suburb", text: $settings.compNowSuburb)
-        TextField("State", text: $settings.compNowState)
-        TextField("Postcode", text: $settings.compNowPostcode)
-        TextField("Email", text: $settings.compNowEmail)
-        TextField("Phone", text: $settings.compNowPhone)
+        TextField("First Name", text: $settings.compnowFirstName)
+        TextField("Last Name", text: $settings.compnowLastName)
+        TextField("Address", text: $settings.compnowAddress)
+        TextField("Suburb", text: $settings.compnowSuburb)
+        TextField("State", text: $settings.compnowState)
+        TextField("Postcode", text: $settings.compnowPostcode)
+        TextField("Email", text: $settings.compnowEmail)
+        TextField("Phone", text: $settings.compnowPhone)
       }
     }
     .formStyle(.grouped)
@@ -525,14 +527,14 @@ struct CompNowSettingsView: View {
     testResult = nil
     defer { isTesting = false }
 
-    let client = CompNowClient(
-      apiKey: settings.compNowAPIKey,
-      username: settings.compNowUsername,
-      password: settings.compNowPassword
+    let client = CompnowClient(
+      apiKey: settings.compnowAPIKey,
+      username: settings.compnowUsername,
+      password: settings.compnowPassword
     )
 
     do {
-      try await client.testCompNowConnection()
+      try await client.testCompnowConnection()
       testResult = .success
     } catch {
       testResult = .failure("Failed: \(error.localizedDescription)")

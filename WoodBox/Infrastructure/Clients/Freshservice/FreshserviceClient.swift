@@ -41,17 +41,18 @@ struct FreshserviceClient: Sendable {
     return String(response.ticket.id)
   }
 
-  func createFreshserviceServiceRequest(_ serviceRequest: FreshserviceServiceRequest) async throws
-    -> String
-  {
+  func createFreshserviceServiceRequest(
+    serviceItemId: Int,
+    request serviceRequest: FreshserviceServiceRequestCreateRequest
+  ) async throws -> String {
     let url = baseURL.appending(
-      path: "api/v2/service_catalog/items/\(serviceRequest.serviceItemDisplayID)/place_request"
+      path: "api/v2/service_catalog/items/\(serviceItemId)/place_request"
     )
     var request = authorizedRequest(url: url, method: "POST")
     request.httpBody = try JSONEncoder().encode(serviceRequest)
 
     let response = try await http.decode(
-      FreshserviceServiceRequestResponse.self,
+      FreshserviceServiceRequestCreateResponse.self,
       from: request,
       action: "create service request",
       integration: "Freshservice"

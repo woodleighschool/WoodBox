@@ -7,15 +7,16 @@
 
 import Foundation
 
-// MARK: - Device Models
+// MARK: Devices
 
+/// Response
 struct IntuneDevicePageResponse: Decodable {
   let value: [IntuneDevice]
   let nextLink: String?
 
   enum CodingKeys: String, CodingKey {
-    case value
     case nextLink = "@odata.nextLink"
+    case value
   }
 }
 
