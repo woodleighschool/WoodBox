@@ -93,11 +93,15 @@ private struct DeviceSearchBody<Content: View>: View {
                 }
               }
             }
+            .onTapGesture {
+              selection.select(device)
+            }
           }
         }
       }
+
       .onSubmit(of: .search) {
-        guard !q.isEmpty, let firstMatch = filteredDevices.first else { return }
+        guard let firstMatch = filteredDevices.first else { return }
         selection.select(firstMatch)
         isSearchPresented = false
         dismissSearch()

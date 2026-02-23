@@ -21,7 +21,8 @@ enum MDMDeletionService {
       }
       if let type = record.jamfDeviceType {
         if type == .mobile {
-          throw IntegrationError(action: "delete", integration: "Jamf", statusCode: -1) /// No DELETE for mobile devices...?
+          throw IntegrationError(action: "delete", integration: "Jamf", statusCode: -1)
+          // No DELETE for mobile devices...?
         } else {
           try await jamfClient.deleteJamfComputer(id: record.deviceID)
         }
