@@ -150,8 +150,6 @@ import SwiftUI
               try await MDMDeletionService.deleteAndRemove(
                 record: record,
                 from: entry.device,
-                jamfClient: modelData.settings.jamfClient,
-                intuneClient: modelData.settings.intuneClient,
                 modelContext: modelContext
               )
             }

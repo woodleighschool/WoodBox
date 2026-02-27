@@ -26,11 +26,7 @@ struct HTTPClient: Sendable {
     }
 
     guard (200 ... 299).contains(http.statusCode) else {
-      throw IntegrationError(
-        action: action,
-        integration: integration,
-        statusCode: http.statusCode
-      )
+      throw IntegrationError(action: action, integration: integration, statusCode: http.statusCode)
     }
 
     return data
@@ -43,7 +39,13 @@ struct HTTPClient: Sendable {
     integration: String = "HTTP"
   ) async throws -> T {
     let data = try await data(for: request, action: action, integration: integration)
-    return try JSONDecoder().decode(type, from: data)
+    do {
+      return try JSONDecoder().decode(type, from: data)
+    } catch let decodingError as DecodingError {
+      throw IntegrationError(
+        action: action, integration: integration, message: decodingError.localizedDescription
+      )
+    }
   }
 }
 

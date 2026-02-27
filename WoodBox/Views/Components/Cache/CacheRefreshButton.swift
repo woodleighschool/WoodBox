@@ -29,8 +29,8 @@ struct CacheRefreshButton: View {
         ProgressView().controlSize(.small)
           .transition(.opacity)
       } else {
-        Image(systemName: symbolName)
-          .foregroundStyle(symbolColor)
+        Image(systemName: symbol.name)
+          .foregroundStyle(symbol.color)
           .contentTransition(.symbolEffect(.replace.downUp))
           .symbolEffect(.bounce, value: showSuccess)
       }
@@ -42,16 +42,30 @@ struct CacheRefreshButton: View {
     }
   }
 
-  private var symbolName: String {
-    if lastError != nil { return "exclamationmark.triangle.fill" }
-    if showSuccess { return "checkmark.circle.fill" }
-    return "arrow.clockwise"
+  private enum ButtonSymbol {
+    case error, success, idle
+
+    var name: String {
+      switch self {
+      case .error: "xmark"
+      case .success: "checkmark"
+      case .idle: "arrow.clockwise"
+      }
+    }
+
+    var color: Color {
+      switch self {
+      case .error: .orange
+      case .success: .green
+      case .idle: .primary
+      }
+    }
   }
 
-  private var symbolColor: Color {
-    if lastError != nil { return .orange }
-    if showSuccess { return .green }
-    return .primary
+  private var symbol: ButtonSymbol {
+    if lastError != nil { return .error }
+    if showSuccess { return .success }
+    return .idle
   }
 
   private var isDisabled: Bool {

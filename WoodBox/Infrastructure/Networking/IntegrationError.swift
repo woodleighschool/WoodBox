@@ -13,17 +13,25 @@ struct IntegrationError: LocalizedError, Sendable {
   let action: String
   let integration: String
   let statusCode: Int?
+  let message: String?
+
+  init(action: String, integration: String, statusCode: Int? = nil, message: String? = nil) {
+    self.action = action
+    self.integration = integration
+    self.statusCode = statusCode
+    self.message = message
+  }
 
   // MARK: - LocalizedError
 
   var errorDescription: String? {
-    let statusText =
-      if let statusCode {
-        "\(Self.statusLabel(for: statusCode)) (\(statusCode))"
-      } else {
-        "Unknown error"
-      }
-    return "Failed to \(action) via \(integration): \(statusText)"
+    if let statusCode {
+      return
+        "Failed to \(action) via \(integration): \(Self.statusLabel(for: statusCode)) (\(statusCode))"
+    } else if let message {
+      return "Failed to \(action) via \(integration): \(message)"
+    }
+    return "Failed to \(action) via \(integration)"
   }
 
   // MARK: - Private Helpers

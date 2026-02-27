@@ -198,12 +198,10 @@ struct ReturnCheckInView: View {
     do {
       if deleteInMDM {
         // Remove device from MDM provider(s)
-        if let record = device.mdmRecords.first { // Assumes there is only 1 device to exterminate...
+        for record in device.mdmRecords {
           try await MDMDeletionService.deleteAndRemove(
             record: record,
             from: device,
-            jamfClient: modelData.settings.jamfClient,
-            intuneClient: modelData.settings.intuneClient,
             modelContext: modelContext
           )
         }

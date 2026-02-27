@@ -18,7 +18,7 @@ struct DeviceDeduplicationView: View {
   private var duplicates: [Device]
 
   @State private var pendingDeletion: (record: MDMRecord, device: Device)?
-  @State private var errorMessage: String?
+  @State private var alertItem: AlertItem?
   @State private var isProcessing = false
 
   // MARK: - Body
@@ -66,13 +66,12 @@ struct DeviceDeduplicationView: View {
         Text("Are you sure you want to delete this record from \(provider)?")
       }
     }
-    .alert(
-      "Error",
-      isPresented: Binding(get: { errorMessage != nil }, set: { if !$0 { errorMessage = nil } })
-    ) {
-      Button("OK") { errorMessage = nil }
-    } message: {
-      Text(errorMessage ?? "")
+    .alert(item: $alertItem) { item in
+      Alert(
+        title: Text(item.title),
+        message: Text(item.message),
+        dismissButton: .default(Text("OK"))
+      )
     }
   }
 
@@ -89,12 +88,10 @@ struct DeviceDeduplicationView: View {
       try await MDMDeletionService.deleteAndRemove(
         record: record,
         from: device,
-        jamfClient: modelData.settings.jamfClient,
-        intuneClient: modelData.settings.intuneClient,
         modelContext: modelContext
       )
     } catch {
-      errorMessage = error.localizedDescription
+      alertItem = AlertItem(title: "Error", message: error.localizedDescription)
     }
   }
 }
