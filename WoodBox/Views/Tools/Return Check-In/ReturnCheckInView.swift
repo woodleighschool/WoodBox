@@ -8,6 +8,13 @@
 import SwiftData
 import SwiftUI
 
+#if os(iOS)
+  private struct BatchCheckInPayload: Identifiable {
+    let id = UUID()
+    let devices: [Device]
+  }
+#endif
+
 struct ReturnCheckInView: View {
   // MARK: - Properties
 
@@ -27,6 +34,9 @@ struct ReturnCheckInView: View {
   @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
   @State private var showDeleteConfirmation = false
+  #if os(iOS)
+    @State private var batchSheetPayload: BatchCheckInPayload?
+  #endif
 
   // MARK: - Computed Properties
 
@@ -112,59 +122,69 @@ struct ReturnCheckInView: View {
       }
     }
     .formStyle(.grouped)
-    .deviceSearch(selection: deviceSelection)
-    .animation(
-      .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
-    )
-    .scrollDismissesKeyboard(.interactively)
-    .toolbar {
-      ToolbarItem(placement: .confirmationAction) {
-        if isSubmitting {
-          ProgressView().controlSize(.small)
-        } else {
-          Button("Submit") {
-            if deleteInMDM, !activeProviders.isEmpty {
-              showDeleteConfirmation = true
-            } else {
-              Task { await submit() }
+    #if os(iOS)
+      .deviceSearch(selection: deviceSelection) { devices in
+        guard !devices.isEmpty else { return }
+        batchSheetPayload = BatchCheckInPayload(devices: devices)
+      }
+      .sheet(item: $batchSheetPayload) { payload in
+        BatchCheckInSheet(devices: payload.devices)
+      }
+    #else
+      .deviceSearch(selection: deviceSelection)
+    #endif
+      .animation(
+        .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
+      )
+      .scrollDismissesKeyboard(.interactively)
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          if isSubmitting {
+            ProgressView().controlSize(.small)
+          } else {
+            Button("Submit") {
+              if deleteInMDM, !activeProviders.isEmpty {
+                showDeleteConfirmation = true
+              } else {
+                Task { await submit() }
+              }
             }
+            .disabled(deviceSelection.selectedDevice == nil)
+            .buttonStyle(.borderedProminent)
           }
-          .disabled(deviceSelection.selectedDevice == nil)
-          .buttonStyle(.borderedProminent)
         }
       }
-    }
-    .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
-      Button("Delete", role: .destructive) {
-        Task { await submit() }
+      .alert("Confirm MDM Deletion", isPresented: $showDeleteConfirmation) {
+        Button("Delete", role: .destructive) {
+          Task { await submit() }
+        }
+        Button("Cancel", role: .cancel) {}
+      } message: {
+        Text("This will delete the device from \(activeProviders.joined(separator: " and ")).")
       }
-      Button("Cancel", role: .cancel) {}
-    } message: {
-      Text("This will delete the device from \(activeProviders.joined(separator: " and ")).")
-    }
-    .alert(item: $alertItem) { item in
-      Alert(
-        title: Text(item.title),
-        message: Text(item.message),
-        dismissButton: .default(Text("OK"))
-      )
-    }
-    .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
-      if let newDevice = deviceSelection.selectedDevice {
-        endUserName = newDevice.assignedUserName ?? ""
-        endUserEmail = newDevice.assignedUserEmail ?? ""
+      .alert(item: $alertItem) { item in
+        Alert(
+          title: Text(item.title),
+          message: Text(item.message),
+          dismissButton: .default(Text("OK"))
+        )
       }
-    }
-    .onChange(of: modelData.settings.snipeItIsEnabled) { _, isEnabled in
-      if !isEnabled { updateSnipeItStatus = false }
-    }
-    .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
-      if !isEnabled { createFreshserviceRequest = false }
-    }
-    .task {
-      if !modelData.settings.snipeItIsEnabled { updateSnipeItStatus = false }
-      if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
-    }
+      .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
+        if let newDevice = deviceSelection.selectedDevice {
+          endUserName = newDevice.assignedUserName ?? ""
+          endUserEmail = newDevice.assignedUserEmail ?? ""
+        }
+      }
+      .onChange(of: modelData.settings.snipeItIsEnabled) { _, isEnabled in
+        if !isEnabled { updateSnipeItStatus = false }
+      }
+      .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
+        if !isEnabled { createFreshserviceRequest = false }
+      }
+      .task {
+        if !modelData.settings.snipeItIsEnabled { updateSnipeItStatus = false }
+        if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
+      }
   }
 
   // MARK: - Private Helpers

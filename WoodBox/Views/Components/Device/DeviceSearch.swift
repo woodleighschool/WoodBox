@@ -11,18 +11,38 @@ import SwiftUI
 // MARK: - Public API
 
 extension View {
-  func deviceSearch(selection: DeviceSelectionState) -> some View {
-    modifier(DeviceSearch(selection: selection))
-  }
+  #if os(iOS)
+    func deviceSearch(selection: DeviceSelectionState) -> some View {
+      modifier(DeviceSearch(selection: selection, onBatchComplete: nil))
+    }
+
+    func deviceSearch(
+      selection: DeviceSelectionState,
+      onBatchComplete: @escaping ([Device]) -> Void
+    ) -> some View {
+      modifier(DeviceSearch(selection: selection, onBatchComplete: onBatchComplete))
+    }
+  #else
+    func deviceSearch(selection: DeviceSelectionState) -> some View {
+      modifier(DeviceSearch(selection: selection))
+    }
+  #endif
 }
 
-// MARK: - Private
+// MARK: - Modifier
 
 private struct DeviceSearch: ViewModifier {
   @Bindable var selection: DeviceSelectionState
+  #if os(iOS)
+    var onBatchComplete: (([Device]) -> Void)?
+  #endif
 
   func body(content: Content) -> some View {
-    DeviceSearchBody(content: content, selection: selection)
+    #if os(iOS)
+      DeviceSearchBody(content: content, selection: selection, onBatchComplete: onBatchComplete)
+    #else
+      DeviceSearchBody(content: content, selection: selection, onBatchComplete: nil)
+    #endif
   }
 }
 
@@ -31,6 +51,9 @@ private struct DeviceSearch: ViewModifier {
 private struct DeviceSearchBody<Content: View>: View {
   let content: Content
   @Bindable var selection: DeviceSelectionState
+  #if os(iOS)
+    var onBatchComplete: (([Device]) -> Void)?
+  #endif
   @Query private var filteredDevices: [Device]
 
   @Environment(\.dismissSearch) private var dismissSearch
@@ -40,9 +63,16 @@ private struct DeviceSearchBody<Content: View>: View {
     @State private var isScanningDevice = false
   #endif
 
-  init(content: Content, selection: DeviceSelectionState) {
+  init(
+    content: Content,
+    selection: DeviceSelectionState,
+    onBatchComplete: (([Device]) -> Void)? = nil
+  ) {
     self.content = content
     self.selection = selection
+    #if os(iOS)
+      self.onBatchComplete = onBatchComplete
+    #endif
     let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
     var descriptor = FetchDescriptor<Device>(
       predicate: #Predicate { device in
@@ -99,7 +129,6 @@ private struct DeviceSearchBody<Content: View>: View {
           }
         }
       }
-
       .onSubmit(of: .search) {
         guard let firstMatch = filteredDevices.first else { return }
         selection.select(firstMatch)
@@ -108,7 +137,7 @@ private struct DeviceSearchBody<Content: View>: View {
       }
     #if os(iOS)
       .fullScreenCover(isPresented: $isScanningDevice) {
-        DeviceScannerSheet(selection: selection)
+        DeviceScannerSheet(selection: selection, onBatchComplete: onBatchComplete)
       }
       .toolbar {
         // I do want this next to the search field, does not seem achievable...?

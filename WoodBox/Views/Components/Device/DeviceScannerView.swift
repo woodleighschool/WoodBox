@@ -34,9 +34,18 @@ import SwiftUI
 
     @Bindable var selection: DeviceSelectionState
 
+    var onBatchComplete: (([Device]) -> Void)?
+
+    @State private var isBatchMode = false
+    @State private var batchEntries: [Device] = []
+    @State private var scannedIDs: Set<PersistentIdentifier> = []
     @State private var isPaused = false
     @State private var matchedValue: String?
     @State private var notFoundAlert: AlertItem?
+
+    private var batchEnabled: Bool {
+      onBatchComplete != nil
+    }
 
     // MARK: - Body
 
@@ -62,39 +71,139 @@ import SwiftUI
           .containerRelativeFrame(.vertical) { height, _ in height * 0.48 }
           .clipped()
 
+          bottomContent
+        }
+        .ignoresSafeArea(edges: .top)
+        .animation(.snappy(duration: 0.22, extraBounce: 0.08), value: matchedValue)
+        .animation(.snappy(duration: 0.22, extraBounce: 0.06), value: isBatchMode)
+        .animation(.snappy(duration: 0.18), value: batchEntries.count)
+        .toolbar {
+          ToolbarItem(placement: .cancellationAction) {
+            let inBatchWithItems = isBatchMode && !batchEntries.isEmpty
+            Button(action: handleDismiss) {
+              if inBatchWithItems {
+                Image(systemName: "checkmark")
+                  .contentTransition(.symbolEffect(.replace))
+              } else {
+                Text("Cancel")
+              }
+            }
+          }
+          if batchEnabled {
+            ToolbarItem(placement: .primaryAction) {
+              Toggle(isOn: $isBatchMode) {
+                Image(systemName: "list.bullet.rectangle.portrait")
+              }
+            }
+          }
+        }
+        .sensoryFeedback(.success, trigger: matchedValue)
+        .alert(item: $notFoundAlert) { item in
+          if isBatchMode {
+            Alert(
+              title: Text(item.title),
+              message: Text(item.message),
+              dismissButton: .default(Text("Continue")) {
+                matchedValue = nil
+                isPaused = false
+              }
+            )
+          } else {
+            Alert(
+              title: Text(item.title),
+              message: Text(item.message),
+              primaryButton: .cancel(Text("Cancel")) { dismiss() },
+              secondaryButton: .default(Text("Continue")) {
+                matchedValue = nil
+                isPaused = false
+              }
+            )
+          }
+        }
+      }
+    }
+
+    // MARK: - Bottom Content
+
+    private var bottomContent: some View {
+      VStack(spacing: 0) {
+        if isBatchMode {
+          batchContent
+        } else {
           Text("Align a barcode or serial number inside the box.")
             .font(.headline)
             .foregroundStyle(.secondary)
             .padding()
             .padding(.top, 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(.background)
         }
-        .ignoresSafeArea(edges: .top)
-        .animation(.snappy(duration: 0.22, extraBounce: 0.08), value: matchedValue)
-        .toolbar {
-          ToolbarItem(placement: .cancellationAction) {
-            Button(action: { dismiss() }) {
-              Image(systemName: "xmark")
+      }
+      .background(.background)
+    }
+
+    @ViewBuilder
+    private var batchContent: some View {
+      if batchEntries.isEmpty {
+        Text("Scan a device to begin.")
+          .font(.headline)
+          .foregroundStyle(.secondary)
+          .padding()
+          .padding(.top, 8)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      } else {
+        List {
+          ForEach(batchEntries) { device in
+            VStack(alignment: .leading, spacing: 2) {
+              Text(device.model)
+                .font(.subheadline.weight(.medium))
+                .lineLimit(1)
+              HStack(spacing: 8) {
+                HStack(spacing: 3) {
+                  Image(systemName: "barcode")
+                  Text(device.assetTag)
+                }
+                HStack(spacing: 3) {
+                  Image(systemName: "number")
+                  Text(device.serial)
+                }
+                if let expires = device.warrantyExpires {
+                  HStack(spacing: 3) {
+                    Image(systemName: "shield")
+                    Text(
+                      expires.formatted(
+                        .dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits)
+                      )
+                    )
+                  }
+                }
+              }
+              .font(.caption.monospacedDigit())
+              .foregroundStyle(.secondary)
+              .lineLimit(1)
             }
           }
-        }
-        .sensoryFeedback(.success, trigger: matchedValue)
-        .alert(item: $notFoundAlert) { item in
-          Alert(
-            title: Text(item.title),
-            message: Text(item.message),
-            primaryButton: .cancel(Text("Cancel")) { dismiss() },
-            secondaryButton: .default(Text("Continue")) {
-              matchedValue = nil
-              isPaused = false
+          .onDelete { offsets in
+            let removed = offsets.map { batchEntries[$0].persistentModelID }
+            batchEntries.remove(atOffsets: offsets)
+            for id in removed {
+              scannedIDs.remove(id)
             }
-          )
+          }
         }
       }
     }
 
-    // MARK: - Private Helpers
+    // MARK: - Dismiss
+
+    @MainActor
+    private func handleDismiss() {
+      if isBatchMode, !batchEntries.isEmpty {
+        onBatchComplete?(batchEntries)
+      }
+      dismiss()
+    }
+
+    // MARK: - Candidate Handling
 
     @MainActor
     private func handleCandidate(_ value: String, type scanType: ScanType) {
@@ -120,11 +229,32 @@ import SwiftUI
         return
       }
 
-      selection.select(device)
+      if isBatchMode {
+        handleBatchCandidate(device: device)
+      } else {
+        selection.select(device)
+        Task {
+          try? await Task.sleep(for: .milliseconds(600))
+          dismiss()
+        }
+      }
+    }
+
+    @MainActor
+    private func handleBatchCandidate(device: Device) {
+      guard !scannedIDs.contains(device.persistentModelID) else {
+        matchedValue = nil
+        isPaused = false
+        return
+      }
+
+      scannedIDs.insert(device.persistentModelID)
+      batchEntries.insert(device, at: 0)
 
       Task {
-        try? await Task.sleep(for: .milliseconds(600))
-        dismiss()
+        try? await Task.sleep(for: .milliseconds(400))
+        matchedValue = nil
+        isPaused = false
       }
     }
   }
