@@ -64,6 +64,15 @@ struct ToolsSplitView: View {
 
       #if os(iOS)
         Tab(
+          AppTab.bulkScanner.title, systemImage: AppTab.bulkScanner.symbol,
+          value: AppTab.bulkScanner
+        ) {
+          NavigationStack {
+            BulkScannerView()
+          }
+        }
+
+        Tab(
           AppTab.settings.title, systemImage: AppTab.settings.symbol, value: AppTab.settings
         ) {
           NavigationStack {

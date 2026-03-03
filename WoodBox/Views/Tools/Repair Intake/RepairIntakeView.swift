@@ -12,57 +12,129 @@ struct RepairIntakeView: View {
   // MARK: - Properties
 
   @Environment(ModelData.self) private var modelData
+  @Environment(\.modelContext) private var modelContext
 
   @Bindable var deviceSelection: DeviceSelectionState
-  @State private var selectedSpare: Device?
 
-  @State private var endUserName = ""
-  @State private var endUserEmail = ""
-  @State private var problem = ""
-  @State private var notes = ""
-  @State private var createCompnowTicket = true
-  @State private var createFreshserviceTicket = true
+  private struct FormState {
+    var selectedSpare: Device?
+    var endUserName = ""
+    var endUserEmail = ""
+    var problem = ""
+    var notes = ""
+    var createCompnowTicket = true
+    var createFreshserviceTicket = false
+    var checkoutSpare = false
+  }
+
+  @State private var form = FormState()
   @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
+
+  // MARK: - Computed Properties
+
+  private var canCreateFreshserviceTicket: Bool {
+    form.endUserEmail.nilIfEmpty != nil
+  }
+
+  private var canCheckoutSpare: Bool {
+    form.selectedSpare != nil
+  }
+
+  private var isSubmitDisabled: Bool {
+    deviceSelection.selectedDevice == nil || form.problem.nilIfEmpty == nil || isSubmitting
+  }
 
   // MARK: - Body
 
   var body: some View {
+    formContent
+      .formStyle(.grouped)
+      .deviceSearch(selection: deviceSelection)
+      .animation(
+        .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
+      )
+      .scrollDismissesKeyboard(.interactively)
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          if isSubmitting {
+            ProgressView().controlSize(.small)
+          } else {
+            Button {
+              Task { await submit() }
+            } label: {
+              Image(systemName: "arrow.up")
+            }
+            .disabled(isSubmitDisabled)
+            .buttonStyle(.borderedProminent)
+          }
+        }
+      }
+      .alert(item: $alertItem) { item in
+        Alert(
+          title: Text(item.title),
+          message: Text(item.message),
+          dismissButton: .default(Text("OK"))
+        )
+      }
+      .onChange(of: deviceSelection.selectedDevice?.serial, initial: true) { _, _ in
+        syncFormWithSelection()
+      }
+  }
+
+  // MARK: - View Builders
+
+  private var formContent: some View {
     Form {
-      Section("Device") {
-        DeviceSummaryCard(
-          device: deviceSelection.selectedDevice,
-          onClear: deviceSelection.clear
-        )
-      }
+      deviceSection
+      detailsSection
+      endUserSection
+      automationSection
+    }
+  }
 
-      Section {
-        TextField("Problem", text: $problem, prompt: Text("e.g. Broken Screen"))
+  private var deviceSection: some View {
+    Section("Device") {
+      DeviceCard(
+        device: deviceSelection.selectedDevice,
+        onClear: deviceSelection.clear
+      )
+    }
+  }
 
-        SparePicker(
-          spareStatusId: modelData.settings.snipeItSpareStatusId, selection: $selectedSpare
-        )
-        TextField(
-          "Notes", text: $notes,
-          prompt: Text(
-            "Customer states device won't turn on, observed liquid pouring out of the device. Suspected liquid damage."
-          ),
-          axis: .vertical
-        )
-        .lineLimit(3 ... 6)
-      } header: {
-        Label("Details", systemImage: "pencil")
-      }
+  private var detailsSection: some View {
+    Section {
+      TextField("Problem", text: $form.problem, prompt: Text("e.g. Broken Screen"))
 
-      Section {
-        TextField("Name", text: $endUserName)
-        TextField("Email", text: $endUserEmail)
-      } header: {
-        Label("End User", systemImage: "person.crop.circle")
-      }
+      SparePicker(
+        spareStatusId: modelData.settings.snipeItSpareStatusId, selection: $form.selectedSpare
+      )
+      TextField(
+        "Notes", text: $form.notes,
+        prompt: Text(
+          "Customer states device won't turn on, observed liquid pouring out of the device. Suspected liquid damage."
+        ),
+        axis: .vertical
+      )
+      .lineLimit(3 ... 6)
+    } header: {
+      Label("Details", systemImage: "pencil")
+    }
+  }
 
-      Section {
-        Toggle(isOn: compnowToggle) {
+  private var endUserSection: some View {
+    Section {
+      TextField("Name", text: $form.endUserName)
+      TextField("Email", text: $form.endUserEmail)
+    } header: {
+      Label("End User", systemImage: "person.crop.circle")
+    }
+  }
+
+  private var automationSection: some View {
+    Section {
+      if modelData.settings.compnowIsEnabled {
+        Toggle(isOn: $form.createCompnowTicket) {
           Label {
             Text("Create Compnow Ticket")
           } icon: {
@@ -71,9 +143,10 @@ struct RepairIntakeView: View {
               .scaledToFit()
           }
         }
-        .disabled(!modelData.settings.compnowIsEnabled)
+      }
 
-        Toggle(isOn: freshserviceToggle) {
+      if modelData.settings.freshserviceIsEnabled {
+        Toggle(isOn: $form.createFreshserviceTicket) {
           Label {
             Text("Create Freshservice Ticket")
           } icon: {
@@ -82,52 +155,23 @@ struct RepairIntakeView: View {
               .scaledToFit()
           }
         }
-        .disabled(!modelData.settings.freshserviceIsEnabled)
-      } header: {
-        Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
+        .disabled(!canCreateFreshserviceTicket)
       }
-    }
-    .formStyle(.grouped)
-    .deviceSearch(selection: deviceSelection)
-    .animation(
-      .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
-    )
-    .scrollDismissesKeyboard(.interactively)
-    .toolbar {
-      ToolbarItem(placement: .confirmationAction) {
-        if isSubmitting {
-          ProgressView().controlSize(.small)
-        } else {
-          Button("Submit") {
-            Task { await submit() }
+
+      if modelData.settings.snipeItIsEnabled {
+        Toggle(isOn: $form.checkoutSpare) {
+          Label {
+            Text("Checkout Spare to End User")
+          } icon: {
+            Image("snipeit")
+              .resizable()
+              .scaledToFit()
           }
-          .disabled(deviceSelection.selectedDevice == nil || problem.isEmpty)
-          .buttonStyle(.borderedProminent)
         }
+        .disabled(!canCheckoutSpare)
       }
-    }
-    .alert(item: $alertItem) { item in
-      Alert(
-        title: Text(item.title),
-        message: Text(item.message),
-        dismissButton: .default(Text("OK"))
-      )
-    }
-    .onChange(of: deviceSelection.selectedDevice) { _, newDevice in
-      if let newDevice {
-        endUserName = newDevice.assignedUserName ?? ""
-        endUserEmail = newDevice.assignedUserEmail ?? ""
-      }
-    }
-    .onChange(of: modelData.settings.compnowIsEnabled) { _, isEnabled in
-      if !isEnabled { createCompnowTicket = false }
-    }
-    .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
-      if !isEnabled { createFreshserviceTicket = false }
-    }
-    .task {
-      if !modelData.settings.compnowIsEnabled { createCompnowTicket = false }
-      if !modelData.settings.freshserviceIsEnabled { createFreshserviceTicket = false }
+    } header: {
+      Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
     }
   }
 
@@ -135,17 +179,18 @@ struct RepairIntakeView: View {
 
   @MainActor
   private func submit() async {
-    guard let device = deviceSelection.selectedDevice else { return }
+    guard !isSubmitting, let device = deviceSelection.selectedDevice else { return }
     isSubmitting = true
+    defer { isSubmitting = false }
     alertItem = nil
 
     do {
       var compnowTicketId: String?
 
-      if createCompnowTicket, let compnowClient = modelData.settings.compnowClient {
+      if form.createCompnowTicket, let compnowClient = modelData.settings.compnowClient {
         // Create Compnow ticket
         let ticket = CompnowTicketCreateRequest(
-          endUser: endUserName,
+          endUser: form.endUserName,
           product: device.model,
           serial: device.serial,
           firstName: modelData.settings.compnowFirstName,
@@ -158,7 +203,7 @@ struct RepairIntakeView: View {
           phone: modelData.settings.compnowPhone,
           stockCode: nil,
           extras: nil,
-          fault: problem,
+          fault: form.problem,
           condition: nil,
           reference: nil
         )
@@ -166,29 +211,26 @@ struct RepairIntakeView: View {
         compnowTicketId = try await compnowClient.createCompnowTicket(ticket)
       }
 
-      if createFreshserviceTicket, let freshserviceClient = modelData.settings.freshserviceClient {
+      if form.createFreshserviceTicket,
+         let freshserviceClient = modelData.settings.freshserviceClient
+      {
         // Create Freshservice ticket
-        var customFields: [String: JSONValue] = ["print_label": .bool(true)] // Hardcoded specific
-        if let spare = selectedSpare, !modelData.settings.freshserviceSpareField.isEmpty {
-          customFields[modelData.settings.freshserviceSpareField] =
-            spare.name.map(JSONValue.string) ?? .null
+        var customFields: [String: String] = [:]
+        if let spare = form.selectedSpare, !modelData.settings.freshserviceSpareField.isEmpty,
+           let spareName = spare.name
+        {
+          customFields[modelData.settings.freshserviceSpareField] = spareName
         }
         if let cnTicket = compnowTicketId, !modelData.settings.freshserviceCompnowField.isEmpty {
-          customFields[modelData.settings.freshserviceCompnowField] = .string(cnTicket)
+          customFields[modelData.settings.freshserviceCompnowField] = cnTicket
         }
 
         let ticket = FreshserviceTicketRequest(
-          email: endUserEmail,
-          subject: "REPAIR - \(problem)", // Hardcoded specific
-          description: notes,
+          email: form.endUserEmail,
+          subject: "REPAIR - \(form.problem)",
+          description: form.notes,
           status: .open,
           priority: .low,
-          urgency: 1,
-          impact: 1,
-          category: "Hardware", // Hardcoded specific
-          subCategory: "Computer", // Hardcoded specific
-          itemCategory: "Mac", // Hardcoded specific
-          responderId: 120_001_544_231, // Hardcoded specific
           tags: ["repair"], // Hardcoded specific
           customFields: customFields,
           workspaceId: modelData.settings.freshserviceWorkspaceId
@@ -197,41 +239,55 @@ struct RepairIntakeView: View {
         _ = try await freshserviceClient.createFreshserviceTicket(ticket)
       }
 
+      if form.checkoutSpare, let spare = form.selectedSpare,
+         // Checkout spare to user
+         let spareId = spare.snipeItId,
+         let snipeItClient = modelData.settings.snipeItClient
+      {
+        let email: String? = form.endUserEmail
+        let descriptor = FetchDescriptor<SnipeItUser>(
+          predicate: #Predicate<SnipeItUser> { $0.email == email }
+        )
+        let matchingUsers = try modelContext.fetch(descriptor)
+        guard let snipeUser = matchingUsers.first else {
+          throw IntegrationError(
+            action: "checkout spare", integration: "Snipe-IT",
+            message: "No Snipe-IT user found for \(form.endUserEmail)"
+          )
+        }
+        let checkout = SnipeItCheckoutRequest(
+          assignedUser: snipeUser.snipeItId, statusId: spare.statusId ?? 0, note: nil
+        )
+        try await snipeItClient.checkoutSnipeItAsset(assetId: spareId, request: checkout)
+      }
+
       resetForm()
 
     } catch {
-      alertItem = AlertItem(title: "Error", message: error.localizedDescription)
+      alertItem = .error(error)
     }
-
-    isSubmitting = false
   }
 
   private func resetForm() {
     deviceSelection.clear()
-    endUserName = ""
-    endUserEmail = ""
-    problem = ""
-    notes = ""
-    selectedSpare = nil
-    createCompnowTicket = modelData.settings.compnowIsEnabled
-    createFreshserviceTicket = modelData.settings.freshserviceIsEnabled
+    form = FormState()
     alertItem = nil
   }
 
-  // MARK: - Toggle Bindings
+  private func syncFormWithSelection() {
+    guard let device = deviceSelection.selectedDevice else {
+      form.endUserName = ""
+      form.endUserEmail = ""
+      form.createFreshserviceTicket = false
+      return
+    }
 
-  private var compnowToggle: Binding<Bool> {
-    Binding(
-      get: { modelData.settings.compnowIsEnabled && createCompnowTicket },
-      set: { createCompnowTicket = $0 }
-    )
-  }
-
-  private var freshserviceToggle: Binding<Bool> {
-    Binding(
-      get: { modelData.settings.freshserviceIsEnabled && createFreshserviceTicket },
-      set: { createFreshserviceTicket = $0 }
-    )
+    form.endUserName = device.assignedUserName ?? ""
+    form.endUserEmail = device.assignedUserEmail ?? ""
+    form.createFreshserviceTicket = canCreateFreshserviceTicket
+    if !canCheckoutSpare {
+      form.checkoutSpare = false
+    }
   }
 }
 

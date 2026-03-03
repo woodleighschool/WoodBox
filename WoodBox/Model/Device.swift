@@ -26,6 +26,8 @@ final class Device {
   var assignedUserName: String?
   var assignedUserEmail: String?
   var notes: String?
+  var ram: String?
+  var storage: String?
   var warrantyExpires: Date?
 
   @Relationship(deleteRule: .cascade) var mdmRecords: [MDMRecord]
@@ -93,6 +95,21 @@ enum JamfDeviceType: String, Codable, Sendable {
 // MARK: - Extensions
 
 extension Device {
+  var hasSnipeItAsset: Bool {
+    snipeItId != nil
+  }
+
+  var mdmProviderNames: [String] {
+    var providers: [String] = []
+    if mdmRecords.contains(where: { $0.provider == .jamf }) {
+      providers.append(MDMProvider.jamf.rawValue)
+    }
+    if mdmRecords.contains(where: { $0.provider == .intune }) {
+      providers.append(MDMProvider.intune.rawValue)
+    }
+    return providers
+  }
+
   var symbolName: String {
     let rules: [(String, String)] = [
       ("MacBook", "laptopcomputer"),

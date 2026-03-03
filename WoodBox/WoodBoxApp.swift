@@ -10,10 +10,19 @@ import SwiftUI
 
 @main
 struct WoodBoxApp: App {
-  private let modelTypes: [any PersistentModel.Type] = [
-    Device.self,
-    MDMRecord.self,
-  ]
+  private let modelTypes: [any PersistentModel.Type] = {
+    var modelTypes: [any PersistentModel.Type] = [
+      Device.self,
+      MDMRecord.self,
+      SnipeItUser.self,
+    ]
+
+    #if os(iOS)
+      modelTypes.append(BulkScanHistoryItem.self)
+    #endif
+
+    return modelTypes
+  }()
 
   private let container: ModelContainer
   private let modelData: ModelData

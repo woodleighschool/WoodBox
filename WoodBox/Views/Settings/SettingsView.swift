@@ -127,9 +127,6 @@ struct SnipeItSettingsView: View {
   @Bindable var settings: AppSettings
   let cacheManager: CacheManager
 
-  @State private var isTesting = false
-  @State private var testResult: ConnectionTestResult?
-
   // MARK: - Body
 
   var body: some View {
@@ -151,65 +148,34 @@ struct SnipeItSettingsView: View {
         TextField("Base URL", text: $settings.snipeItBaseURL)
         SecureField("API Key", text: $settings.snipeItAPIKey)
 
-        testRow(disabled: settings.snipeItBaseURL.isEmpty) {
-          await testConnection()
+        ConnectionTestRow(disabled: settings.snipeItBaseURL.isEmpty) {
+          try await testConnection()
         }
       }
 
       Section("Configuration") {
         TextField(
-          "Deployable Status ID", value: $settings.snipeItDeployableStatusId, format: .number
+          "Ready to Deploy Status ID", value: $settings.snipeItReadyToDeployStatusId,
+          format: .number
         )
+        TextField("Stock Status ID", value: $settings.snipeItStockStatusId, format: .number)
         TextField("For Sale Status ID", value: $settings.snipeItForSaleStatusId, format: .number)
         TextField("Spare Status ID", value: $settings.snipeItSpareStatusId, format: .number)
         TextField("Condition Custom Field", text: $settings.snipeItConditionField)
         TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
+        TextField("RAM Custom Field", text: $settings.snipeItRAMField)
+        TextField("Storage Custom Field", text: $settings.snipeItStorageField)
       }
     }
     .formStyle(.grouped)
   }
 
-  @MainActor
-  private func testConnection() async {
-    isTesting = true
-    testResult = nil
-    defer { isTesting = false }
+  // MARK: - Private Helpers
 
-    guard let url = URL(string: settings.snipeItBaseURL) else {
-      testResult = .failure("Invalid URL")
-      return
-    }
-
+  private func testConnection() async throws {
+    guard let url = URL(string: settings.snipeItBaseURL) else { throw URLError(.badURL) }
     let client = SnipeITClient(baseURL: url, apiToken: settings.snipeItAPIKey)
-    do {
-      try await client.testSnipeItConnection()
-      testResult = .success
-    } catch {
-      testResult = .failure("Failed: \(error.localizedDescription)")
-    }
-  }
-
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
-    -> some View
-  {
-    HStack {
-      Button("Test Connection") { Task { await action() } }
-        .disabled(isTesting || disabled)
-
-      if isTesting { ProgressView().controlSize(.small) }
-
-      switch testResult {
-      case .success:
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      case let .failure(message):
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
-          .help(message)
-      case .none:
-        EmptyView()
-      }
-    }
+    try await client.testSnipeItConnection()
   }
 }
 
@@ -218,9 +184,6 @@ struct JamfSettingsView: View {
 
   @Bindable var settings: AppSettings
   let cacheManager: CacheManager
-
-  @State private var isTesting = false
-  @State private var testResult: ConnectionTestResult?
 
   // MARK: - Body
 
@@ -243,8 +206,8 @@ struct JamfSettingsView: View {
         TextField("Client ID", text: $settings.jamfClientId)
         SecureField("Client Secret", text: $settings.jamfClientSecret)
 
-        testRow(disabled: settings.jamfBaseURL.isEmpty) {
-          await testConnection()
+        ConnectionTestRow(disabled: settings.jamfBaseURL.isEmpty) {
+          try await testConnection()
         }
 
         if settings.snipeItIsEnabled == false {
@@ -259,51 +222,14 @@ struct JamfSettingsView: View {
 
   // MARK: - Private Helpers
 
-  @MainActor
-  private func testConnection() async {
-    isTesting = true
-    testResult = nil
-    defer { isTesting = false }
-
-    guard let url = URL(string: settings.jamfBaseURL) else {
-      testResult = .failure("Invalid URL")
-      return
-    }
-
+  private func testConnection() async throws {
+    guard let url = URL(string: settings.jamfBaseURL) else { throw URLError(.badURL) }
     let client = JamfClient(
       baseURL: url,
       clientId: settings.jamfClientId,
       clientSecret: settings.jamfClientSecret
     )
-    do {
-      try await client.testJamfConnection()
-      testResult = .success
-    } catch {
-      testResult = .failure("Failed: \(error.localizedDescription)")
-    }
-  }
-
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
-    -> some View
-  {
-    HStack {
-      Button("Test Connection") { Task { await action() } }
-        .disabled(isTesting || disabled)
-
-      if isTesting { ProgressView().controlSize(.small) }
-
-      switch testResult {
-      case .success:
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      case let .failure(message):
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
-          .help(message)
-      case .none:
-        EmptyView()
-      }
-    }
+    try await client.testJamfConnection()
   }
 }
 
@@ -312,9 +238,6 @@ struct IntuneSettingsView: View {
 
   @Bindable var settings: AppSettings
   let cacheManager: CacheManager
-
-  @State private var isTesting = false
-  @State private var testResult: ConnectionTestResult?
 
   // MARK: - Body
 
@@ -337,8 +260,8 @@ struct IntuneSettingsView: View {
         TextField("Client ID", text: $settings.intuneClientId)
         SecureField("Client Secret", text: $settings.intuneClientSecret)
 
-        testRow {
-          await testConnection()
+        ConnectionTestRow {
+          try await testConnection()
         }
 
         if settings.snipeItIsEnabled == false {
@@ -353,47 +276,13 @@ struct IntuneSettingsView: View {
 
   // MARK: - Private Helpers
 
-  @MainActor
-  private func testConnection() async {
-    isTesting = true
-    testResult = nil
-    defer { isTesting = false }
-
+  private func testConnection() async throws {
     let client = IntuneClient(
       tenantId: settings.intuneTenantId,
       clientId: settings.intuneClientId,
       clientSecret: settings.intuneClientSecret
     )
-
-    do {
-      try await client.testIntuneConnection()
-      testResult = .success
-    } catch {
-      testResult = .failure("Failed: \(error.localizedDescription)")
-    }
-  }
-
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
-    -> some View
-  {
-    HStack {
-      Button("Test Connection") { Task { await action() } }
-        .disabled(isTesting || disabled)
-
-      if isTesting { ProgressView().controlSize(.small) }
-
-      switch testResult {
-      case .success:
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      case let .failure(message):
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
-          .help(message)
-      case .none:
-        EmptyView()
-      }
-    }
+    try await client.testIntuneConnection()
   }
 }
 
@@ -401,9 +290,6 @@ struct FreshserviceSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
-
-  @State private var isTesting = false
-  @State private var testResult: ConnectionTestResult?
 
   // MARK: - Body
 
@@ -414,8 +300,8 @@ struct FreshserviceSettingsView: View {
         TextField("Base URL", text: $settings.freshserviceBaseURL)
         SecureField("API Key", text: $settings.freshserviceAPIKey)
 
-        testRow(disabled: settings.freshserviceBaseURL.isEmpty) {
-          await testConnection()
+        ConnectionTestRow(disabled: settings.freshserviceBaseURL.isEmpty) {
+          try await testConnection()
         }
       }
 
@@ -438,47 +324,12 @@ struct FreshserviceSettingsView: View {
 
   // MARK: - Private Helpers
 
-  @MainActor
-  private func testConnection() async {
-    isTesting = true
-    testResult = nil
-    defer { isTesting = false }
-
+  private func testConnection() async throws {
     guard let url = URL(string: settings.freshserviceBaseURL) else {
-      testResult = .failure("Invalid URL")
-      return
+      throw URLError(.badURL)
     }
-
     let client = FreshserviceClient(baseURL: url, apiKey: settings.freshserviceAPIKey)
-    do {
-      try await client.testFreshserviceConnection()
-      testResult = .success
-    } catch {
-      testResult = .failure("Failed: \(error.localizedDescription)")
-    }
-  }
-
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
-    -> some View
-  {
-    HStack {
-      Button("Test Connection") { Task { await action() } }
-        .disabled(isTesting || disabled)
-
-      if isTesting { ProgressView().controlSize(.small) }
-
-      switch testResult {
-      case .success:
-        Image(systemName: "checkmark.circle.fill")
-          .foregroundStyle(.green)
-      case let .failure(message):
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
-          .help(message)
-      case .none:
-        EmptyView()
-      }
-    }
+    try await client.testFreshserviceConnection()
   }
 }
 
@@ -486,9 +337,6 @@ struct CompnowSettingsView: View {
   // MARK: - Properties
 
   @Bindable var settings: AppSettings
-
-  @State private var isTesting = false
-  @State private var testResult: ConnectionTestResult?
 
   // MARK: - Body
 
@@ -500,8 +348,8 @@ struct CompnowSettingsView: View {
         SecureField("Password", text: $settings.compnowPassword)
         SecureField("API Key", text: $settings.compnowAPIKey)
 
-        testRow {
-          await testConnection()
+        ConnectionTestRow {
+          try await testConnection()
         }
       }
 
@@ -521,31 +369,33 @@ struct CompnowSettingsView: View {
 
   // MARK: - Private Helpers
 
-  @MainActor
-  private func testConnection() async {
-    isTesting = true
-    testResult = nil
-    defer { isTesting = false }
-
+  private func testConnection() async throws {
     let client = CompnowClient(
       apiKey: settings.compnowAPIKey,
       username: settings.compnowUsername,
       password: settings.compnowPassword
     )
-
-    do {
-      try await client.testCompnowConnection()
-      testResult = .success
-    } catch {
-      testResult = .failure("Failed: \(error.localizedDescription)")
-    }
+    try await client.testCompnowConnection()
   }
+}
 
-  private func testRow(disabled: Bool = false, action: @escaping @MainActor () async -> Void)
-    -> some View
-  {
+// MARK: - ConnectionTestRow
+
+private struct ConnectionTestRow: View {
+  // MARK: - Properties
+
+  var disabled: Bool = false
+  let action: @MainActor () async throws -> Void
+
+  @State private var isTesting = false
+  @State private var testResult: ConnectionTestResult?
+  @State private var showErrorPopover = false
+
+  // MARK: - Body
+
+  var body: some View {
     HStack {
-      Button("Test Connection") { Task { await action() } }
+      Button("Test Connection") { Task { await runTest() } }
         .disabled(isTesting || disabled)
 
       if isTesting { ProgressView().controlSize(.small) }
@@ -554,13 +404,40 @@ struct CompnowSettingsView: View {
       case .success:
         Image(systemName: "checkmark.circle.fill")
           .foregroundStyle(.green)
-      case let .failure(message):
-        Image(systemName: "xmark.circle.fill")
-          .foregroundStyle(.red)
-          .help(message)
+      case .failure:
+        Button {
+          showErrorPopover = true
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundStyle(.red)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $showErrorPopover) {
+          if case let .failure(message) = testResult {
+            Text(message)
+              .padding()
+              .presentationCompactAdaptation(.popover)
+          }
+        }
       case .none:
         EmptyView()
       }
+    }
+  }
+
+  // MARK: - Private Helpers
+
+  @MainActor
+  private func runTest() async {
+    isTesting = true
+    testResult = nil
+    showErrorPopover = false
+    defer { isTesting = false }
+    do {
+      try await action()
+      testResult = .success
+    } catch {
+      testResult = .failure(error.localizedDescription)
     }
   }
 }

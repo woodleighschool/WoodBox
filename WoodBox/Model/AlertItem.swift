@@ -14,3 +14,9 @@ struct AlertItem: Identifiable, Sendable {
   let title: String
   let message: String
 }
+
+extension AlertItem {
+  static func error(_ error: any Error) -> AlertItem {
+    AlertItem(title: "Error", message: error.localizedDescription)
+  }
+}

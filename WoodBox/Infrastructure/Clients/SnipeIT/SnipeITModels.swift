@@ -7,7 +7,7 @@
 
 import Foundation
 
-// MARK: Check In Asset
+// MARK: Check-In Asset
 
 /// Request
 struct SnipeItCheckinRequest: Encodable, Sendable {
@@ -24,13 +24,43 @@ struct SnipeItCheckinRequest: Encodable, Sendable {
   }
 }
 
+// MARK: Check-Out Asset
+
+/// Request
+struct SnipeItCheckoutRequest: Encodable, Sendable {
+  let checkoutToType = "user"
+  let assignedUser: Int
+  let statusId: Int
+  let note: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case checkoutToType = "checkout_to_type"
+    case assignedUser = "assigned_user"
+    case statusId = "status_id"
+    case note
+  }
+}
+
+// MARK: Users
+
+/// Response
+struct SnipeItUsersResponse: Decodable {
+  let rows: [SnipeItUserResponse]
+}
+
+struct SnipeItUserResponse: Decodable {
+  let id: Int
+  let name: String?
+  let email: String?
+}
+
 // MARK: Update Asset
 
 /// Request
 struct SnipeItUpdateRequest: Encodable, Sendable {
   let statusId: Int?
   let notes: String?
-  let customFields: [String: JSONValue]?
+  let customFields: [String: String]?
 
   private struct DynamicKey: CodingKey {
     var stringValue: String
@@ -76,12 +106,14 @@ struct SnipeItAssetResponse: Decodable {
   let statusLabel: SnipeItAssetStatus?
   let assignedTo: SnipeItAssetUser?
   let notes: String?
+  let customFields: [String: SnipeItAssetCustomField]?
   let warrantyExpires: SnipeItWarrantyDate?
 
   private enum CodingKeys: String, CodingKey {
     case assetTag = "asset_tag"
     case assignedTo = "assigned_to"
     case category
+    case customFields = "custom_fields"
     case id
     case model
     case name
@@ -89,6 +121,30 @@ struct SnipeItAssetResponse: Decodable {
     case serial
     case statusLabel = "status_label"
     case warrantyExpires = "warranty_expires"
+  }
+
+  subscript(customField key: String) -> String? {
+    customFields?[key]?.value
+  }
+}
+
+struct SnipeItAssetCustomField: Decodable {
+  let value: String?
+
+  private enum CodingKeys: String, CodingKey {
+    case value
+  }
+
+  init(from decoder: Decoder) throws {
+    if let singleValueContainer = try? decoder.singleValueContainer(),
+       let rawValue = try? singleValueContainer.decode(String.self)
+    {
+      value = rawValue.nilIfEmpty
+      return
+    }
+
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    value = try container.decodeIfPresent(String.self, forKey: .value).nilIfEmpty
   }
 }
 

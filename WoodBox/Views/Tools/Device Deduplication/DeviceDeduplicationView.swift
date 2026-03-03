@@ -78,6 +78,7 @@ struct DeviceDeduplicationView: View {
   // MARK: - Private Methods
 
   private func delete(_ record: MDMRecord, from device: Device) async {
+    guard !isProcessing else { return }
     isProcessing = true
     defer {
       isProcessing = false
@@ -91,7 +92,7 @@ struct DeviceDeduplicationView: View {
         modelContext: modelContext
       )
     } catch {
-      alertItem = AlertItem(title: "Error", message: error.localizedDescription)
+      alertItem = .error(error)
     }
   }
 }

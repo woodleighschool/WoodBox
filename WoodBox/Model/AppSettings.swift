@@ -42,9 +42,17 @@ final class AppSettings {
     }
   }
 
-  var snipeItDeployableStatusId: Int {
+  var snipeItReadyToDeployStatusId: Int {
     didSet {
-      UserDefaults.standard.set(snipeItDeployableStatusId, forKey: "snipeItDeployableStatusId")
+      UserDefaults.standard.set(
+        snipeItReadyToDeployStatusId, forKey: "snipeItReadyToDeployStatusId"
+      )
+    }
+  }
+
+  var snipeItStockStatusId: Int {
+    didSet {
+      UserDefaults.standard.set(snipeItStockStatusId, forKey: "snipeItStockStatusId")
     }
   }
 
@@ -63,6 +71,18 @@ final class AppSettings {
   var snipeItConditionNotesField: String {
     didSet {
       UserDefaults.standard.set(snipeItConditionNotesField, forKey: "snipeItConditionNotesField")
+    }
+  }
+
+  var snipeItRAMField: String {
+    didSet {
+      UserDefaults.standard.set(snipeItRAMField, forKey: "snipeItRAMField")
+    }
+  }
+
+  var snipeItStorageField: String {
+    didSet {
+      UserDefaults.standard.set(snipeItStorageField, forKey: "snipeItStorageField")
     }
   }
 
@@ -279,7 +299,10 @@ final class AppSettings {
     snipeItBaseURL = UserDefaults.standard.string(forKey: "snipeItBaseURL") ?? ""
     snipeItAPIKey = keychain.read(key: "snipeItAPIKey") ?? ""
     snipeItForSaleStatusId = UserDefaults.standard.integer(forKey: "snipeItForSaleStatusId")
-    snipeItDeployableStatusId = UserDefaults.standard.integer(forKey: "snipeItDeployableStatusId")
+    snipeItReadyToDeployStatusId = UserDefaults.standard.integer(
+      forKey: "snipeItReadyToDeployStatusId"
+    )
+    snipeItStockStatusId = UserDefaults.standard.integer(forKey: "snipeItStockStatusId")
     snipeItSpareStatusId = UserDefaults.standard.integer(forKey: "snipeItSpareStatusId")
     snipeItConditionField =
       UserDefaults.standard.string(forKey: "snipeItConditionField")
@@ -290,6 +313,8 @@ final class AppSettings {
         ?? UserDefaults.standard.string(forKey: "snipeItConditionNotesFieldKey")
         ?? UserDefaults.standard.string(forKey: "snipeItNotesFieldKey")
         ?? ""
+    snipeItRAMField = UserDefaults.standard.string(forKey: "snipeItRAMField") ?? ""
+    snipeItStorageField = UserDefaults.standard.string(forKey: "snipeItStorageField") ?? ""
 
     jamfIsEnabled = UserDefaults.standard.bool(forKey: "jamfIsEnabled")
     jamfBaseURL = UserDefaults.standard.string(forKey: "jamfBaseURL") ?? ""

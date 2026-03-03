@@ -16,29 +16,18 @@ struct FreshserviceTicketRequest: Encodable, Sendable {
   let description: String
   let status: FreshserviceTicketStatus
   let priority: FreshserviceTicketPriority
-  let urgency: Int
-  let impact: Int
-  let category: String?
-  let subCategory: String?
-  let itemCategory: String?
-  let responderId: Int?
   let tags: [String]?
-  let customFields: [String: JSONValue]?
+  let customFields: [String: String]?
   let workspaceId: Int?
 
   enum CodingKeys: String, CodingKey {
-    case category
     case customFields = "custom_fields"
     case description
     case email
-    case impact
-    case itemCategory = "item_category"
     case priority
-    case responderId = "responder_id"
     case status
-    case subCategory = "sub_category"
     case tags
-    case urgency
+    case subject
     case workspaceId = "workspace_id"
   }
 }
@@ -73,8 +62,14 @@ enum FreshserviceTicketPriority: Int, Codable, Sendable {
 struct FreshserviceServiceRequestCreateRequest: Encodable, Sendable {
   let email: String
   let quantity: Int = 1
-  let customFields: [String: JSONValue]?
+  let customFields: [String: String]?
   let workspaceId: Int?
+
+  init(email: String, customFields: [String: String]?, workspaceId: Int?) {
+    self.email = email
+    self.customFields = customFields?.isEmpty == true ? nil : customFields
+    self.workspaceId = workspaceId
+  }
 
   enum CodingKeys: String, CodingKey {
     case customFields = "custom_fields"

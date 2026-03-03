@@ -8,13 +8,6 @@
 import SwiftData
 import SwiftUI
 
-#if os(iOS)
-  private struct BatchCheckInPayload: Identifiable {
-    let id = UUID()
-    let devices: [Device]
-  }
-#endif
-
 struct ReturnCheckInView: View {
   // MARK: - Properties
 
@@ -23,116 +16,46 @@ struct ReturnCheckInView: View {
 
   @Bindable var deviceSelection: DeviceSelectionState
 
-  @State private var endUserName = ""
-  @State private var endUserEmail = ""
-  @State private var goodCondition = true
-  @State private var hasCharger = true
-  @State private var deleteInMDM = false
-  @State private var updateSnipeItStatus = true
-  @State private var createFreshserviceRequest = true
-  @State private var notes = ""
+  private struct FormState {
+    var endUserName = ""
+    var endUserEmail = ""
+    var goodCondition = true
+    var hasCharger = true
+    var deleteInMDM = false
+    var updateSnipeItStatus = false
+    var createFreshserviceRequest = false
+    var notes = ""
+  }
+
+  @State private var form = FormState()
   @State private var isSubmitting = false
   @State private var alertItem: AlertItem?
   @State private var showDeleteConfirmation = false
-  #if os(iOS)
-    @State private var batchSheetPayload: BatchCheckInPayload?
-  #endif
 
   // MARK: - Computed Properties
 
+  private var canUpdateSnipeIt: Bool {
+    deviceSelection.selectedDevice?.hasSnipeItAsset == true
+  }
+
+  private var canCreateFreshserviceRequest: Bool {
+    form.endUserEmail.nilIfEmpty != nil
+  }
+
   private var activeProviders: [String] {
-    guard let device = deviceSelection.selectedDevice else { return [] }
-    var providers: [String] = []
+    deviceSelection.selectedDevice?.mdmProviderNames ?? []
+  }
 
-    if device.mdmRecords.contains(where: { $0.provider == .jamf }) {
-      providers.append("Jamf")
-    }
-    if device.mdmRecords.contains(where: { $0.provider == .intune }) {
-      providers.append("Intune")
-    }
-
-    return providers
+  private var isSubmitDisabled: Bool {
+    deviceSelection.selectedDevice == nil || isSubmitting
   }
 
   // MARK: - Body
 
   var body: some View {
-    Form {
-      Section("Device") {
-        DeviceSummaryCard(
-          device: deviceSelection.selectedDevice,
-          onClear: deviceSelection.clear
-        )
-      }
-
-      Section {
-        Toggle("Good Condition", isOn: $goodCondition)
-        Toggle("Has Charger", isOn: $hasCharger)
-        TextField(
-          "Notes", text: $notes, prompt: Text("Missing some keys, will be $149 to be fixed..."),
-          axis: .vertical
-        )
-        .lineLimit(3 ... 6)
-      } header: {
-        Label("Details", systemImage: "pencil")
-      }
-
-      Section {
-        TextField("Name", text: $endUserName)
-        TextField("Email", text: $endUserEmail)
-      } header: {
-        Label("End User", systemImage: "person.crop.circle")
-      }
-
-      Section {
-        if !activeProviders.isEmpty {
-          Toggle(isOn: $deleteInMDM) {
-            Label {
-              Text("Delete device from \(activeProviders.joined(separator: " and "))")
-            } icon: {
-              Image(systemName: "trash")
-                .foregroundStyle(.red)
-            }
-          }
-        }
-
-        Toggle(isOn: snipeItToggle) {
-          Label {
-            Text("Update Snipe-IT Status")
-          } icon: {
-            Image("snipeit")
-              .resizable()
-              .scaledToFit()
-          }
-        }
-        .disabled(!modelData.settings.snipeItIsEnabled)
-
-        Toggle(isOn: freshserviceToggle) {
-          Label {
-            Text("Create Service Request")
-          } icon: {
-            Image("freshservice")
-              .resizable()
-              .scaledToFit()
-          }
-        }
-        .disabled(!modelData.settings.freshserviceIsEnabled)
-      } header: {
-        Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
-      }
-    }
-    .formStyle(.grouped)
-    #if os(iOS)
-      .deviceSearch(selection: deviceSelection) { devices in
-        guard !devices.isEmpty else { return }
-        batchSheetPayload = BatchCheckInPayload(devices: devices)
-      }
-      .sheet(item: $batchSheetPayload) { payload in
-        BatchCheckInSheet(devices: payload.devices)
-      }
-    #else
+    formContent
+      .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
-    #endif
       .animation(
         .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
       )
@@ -142,14 +65,16 @@ struct ReturnCheckInView: View {
           if isSubmitting {
             ProgressView().controlSize(.small)
           } else {
-            Button("Submit") {
-              if deleteInMDM, !activeProviders.isEmpty {
+            Button {
+              if form.deleteInMDM, !activeProviders.isEmpty {
                 showDeleteConfirmation = true
               } else {
                 Task { await submit() }
               }
+            } label: {
+              Image(systemName: "arrow.up")
             }
-            .disabled(deviceSelection.selectedDevice == nil)
+            .disabled(isSubmitDisabled)
             .buttonStyle(.borderedProminent)
           }
         }
@@ -169,34 +94,108 @@ struct ReturnCheckInView: View {
           dismissButton: .default(Text("OK"))
         )
       }
-      .onChange(of: deviceSelection.selectedDevice?.serial) { _, _ in
-        if let newDevice = deviceSelection.selectedDevice {
-          endUserName = newDevice.assignedUserName ?? ""
-          endUserEmail = newDevice.assignedUserEmail ?? ""
+      .onChange(of: deviceSelection.selectedDevice?.serial, initial: true) { _, _ in
+        syncFormWithSelection()
+      }
+  }
+
+  // MARK: - View Builders
+
+  private var formContent: some View {
+    Form {
+      deviceSection
+      detailsSection
+      endUserSection
+      automationSection
+    }
+  }
+
+  private var deviceSection: some View {
+    Section("Device") {
+      DeviceCard(
+        device: deviceSelection.selectedDevice,
+        onClear: deviceSelection.clear
+      )
+    }
+  }
+
+  private var detailsSection: some View {
+    Section {
+      Toggle("Good Condition", isOn: $form.goodCondition)
+      Toggle("Has Charger", isOn: $form.hasCharger)
+      TextField(
+        "Notes", text: $form.notes, prompt: Text("Missing some keys, will be $149 to be fixed..."),
+        axis: .vertical
+      )
+      .lineLimit(3 ... 6)
+    } header: {
+      Label("Details", systemImage: "pencil")
+    }
+  }
+
+  private var endUserSection: some View {
+    Section {
+      TextField("Name", text: $form.endUserName)
+      TextField("Email", text: $form.endUserEmail)
+    } header: {
+      Label("End User", systemImage: "person.crop.circle")
+    }
+  }
+
+  private var automationSection: some View {
+    Section {
+      if !activeProviders.isEmpty {
+        Toggle(isOn: $form.deleteInMDM) {
+          Label {
+            Text("Delete device from \(activeProviders.joined(separator: " and "))")
+          } icon: {
+            Image(systemName: "trash")
+              .foregroundStyle(.red)
+          }
         }
       }
-      .onChange(of: modelData.settings.snipeItIsEnabled) { _, isEnabled in
-        if !isEnabled { updateSnipeItStatus = false }
+
+      if modelData.settings.snipeItIsEnabled {
+        Toggle(isOn: $form.updateSnipeItStatus) {
+          Label {
+            Text("Update Snipe-IT Status")
+          } icon: {
+            Image("snipeit")
+              .resizable()
+              .scaledToFit()
+          }
+        }
+        .disabled(!canUpdateSnipeIt)
       }
-      .onChange(of: modelData.settings.freshserviceIsEnabled) { _, isEnabled in
-        if !isEnabled { createFreshserviceRequest = false }
+
+      if modelData.settings.freshserviceIsEnabled {
+        Toggle(isOn: $form.createFreshserviceRequest) {
+          Label {
+            Text("Create Service Request")
+          } icon: {
+            Image("freshservice")
+              .resizable()
+              .scaledToFit()
+          }
+        }
+        .disabled(!canCreateFreshserviceRequest)
       }
-      .task {
-        if !modelData.settings.snipeItIsEnabled { updateSnipeItStatus = false }
-        if !modelData.settings.freshserviceIsEnabled { createFreshserviceRequest = false }
-      }
+    } header: {
+      Label("Automation", systemImage: "point.3.filled.connected.trianglepath.dotted")
+    }
   }
 
   // MARK: - Private Helpers
 
   @MainActor
   private func submit() async {
-    guard let device = deviceSelection.selectedDevice else { return }
+    guard !isSubmitting, let device = deviceSelection.selectedDevice else { return }
     isSubmitting = true
+    defer { isSubmitting = false }
     alertItem = nil
 
     do {
-      if deleteInMDM {
+      if form.deleteInMDM {
         // Remove device from MDM provider(s)
         for record in device.mdmRecords {
           try await MDMDeletionService.deleteAndRemove(
@@ -207,14 +206,14 @@ struct ReturnCheckInView: View {
         }
       }
 
-      if updateSnipeItStatus, let assetId = device.snipeItId,
+      if form.updateSnipeItStatus, let assetId = device.snipeItId,
          let snipeItClient = modelData.settings.snipeItClient
       {
         // Update Snipe-IT status
         try await snipeItClient.checkinSnipeItAsset(
           assetId: assetId,
           request: SnipeItCheckinRequest(
-            statusId: modelData.settings.snipeItDeployableStatusId,
+            statusId: modelData.settings.snipeItStockStatusId,
             name: nil,
             note: "Returned via WoodBox",
             locationId: nil
@@ -222,25 +221,27 @@ struct ReturnCheckInView: View {
         )
       }
 
-      if createFreshserviceRequest, let freshserviceClient = modelData.settings.freshserviceClient {
+      if form.createFreshserviceRequest,
+         let freshserviceClient = modelData.settings.freshserviceClient
+      {
         // Create Freshservice service request
-        var customFields: [String: JSONValue] = [:]
+        var customFields: [String: String] = [:]
         if !modelData.settings.freshserviceReturnConditionField.isEmpty {
           customFields[modelData.settings.freshserviceReturnConditionField] =
-            .string(goodCondition ? "Yes" : "No") // Hardcoded specific
+            form.goodCondition ? "Yes" : "No"
         }
         if !modelData.settings.freshserviceReturnChargerField.isEmpty {
           customFields[modelData.settings.freshserviceReturnChargerField] =
-            .string(hasCharger ? "Yes" : "No") // Hardcoded specific
+            form.hasCharger ? "Yes" : "No"
         }
-        if !modelData.settings.freshserviceReturnNotesField.isEmpty, !notes.isEmpty {
-          customFields[modelData.settings.freshserviceReturnNotesField] = .string(notes)
+        if !modelData.settings.freshserviceReturnNotesField.isEmpty, !form.notes.isEmpty {
+          customFields[modelData.settings.freshserviceReturnNotesField] = form.notes
         }
 
         _ = try await freshserviceClient.createFreshserviceServiceRequest(
           serviceItemId: modelData.settings.freshserviceReturnedMachineServiceItemId,
           request: FreshserviceServiceRequestCreateRequest(
-            email: endUserEmail,
+            email: form.endUserEmail,
             customFields: customFields.isEmpty ? nil : customFields,
             workspaceId: modelData.settings.freshserviceWorkspaceId
           )
@@ -250,38 +251,32 @@ struct ReturnCheckInView: View {
       resetForm()
 
     } catch {
-      alertItem = AlertItem(title: "Error", message: error.localizedDescription)
+      alertItem = .error(error)
     }
-
-    isSubmitting = false
   }
 
   private func resetForm() {
     deviceSelection.clear()
-    endUserName = ""
-    endUserEmail = ""
-    goodCondition = true
-    hasCharger = true
-    deleteInMDM = false
-    notes = ""
-    updateSnipeItStatus = modelData.settings.snipeItIsEnabled
-    createFreshserviceRequest = modelData.settings.freshserviceIsEnabled
+    form = FormState()
     alertItem = nil
   }
 
-  // MARK: - Toggle Bindings
+  private func syncFormWithSelection() {
+    guard let device = deviceSelection.selectedDevice else {
+      form.endUserName = ""
+      form.endUserEmail = ""
+      form.updateSnipeItStatus = false
+      form.createFreshserviceRequest = false
+      form.deleteInMDM = false
+      return
+    }
 
-  private var snipeItToggle: Binding<Bool> {
-    Binding(
-      get: { modelData.settings.snipeItIsEnabled && updateSnipeItStatus },
-      set: { updateSnipeItStatus = $0 }
-    )
-  }
-
-  private var freshserviceToggle: Binding<Bool> {
-    Binding(
-      get: { modelData.settings.freshserviceIsEnabled && createFreshserviceRequest },
-      set: { createFreshserviceRequest = $0 }
-    )
+    form.endUserName = device.assignedUserName ?? ""
+    form.endUserEmail = device.assignedUserEmail ?? ""
+    form.updateSnipeItStatus = device.hasSnipeItAsset
+    form.createFreshserviceRequest = canCreateFreshserviceRequest
+    if activeProviders.isEmpty {
+      form.deleteInMDM = false
+    }
   }
 }

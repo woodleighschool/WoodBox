@@ -53,18 +53,21 @@ final class CacheManager {
 
     guard settings.snipeItIsEnabled else {
       try? clearDeviceCache()
+      try? clearUserCache()
       markAsSynced()
       return
     }
 
     do {
       async let snipeItAssets = fetchSnipeItAssets()
+      async let snipeItUsers = fetchSnipeItUsers()
       async let jamfComputers = fetchJamfComputers()
       async let jamfMobiles = fetchJamfMobileDevices()
       async let intuneDevices = fetchIntuneDevices()
 
       try await process(
         snipeItAssets: snipeItAssets,
+        snipeItUsers: snipeItUsers,
         jamfComputers: jamfComputers,
         jamfMobiles: jamfMobiles,
         intuneDevices: intuneDevices
@@ -81,6 +84,7 @@ final class CacheManager {
     status = .syncing(message: "Purging...")
 
     try? clearDeviceCache()
+    try? clearUserCache()
     markAsSynced()
   }
 
@@ -134,6 +138,10 @@ final class CacheManager {
     try await snipeItClient?.fetchSnipeItAssets() ?? []
   }
 
+  private func fetchSnipeItUsers() async throws -> [SnipeItUserResponse] {
+    try await snipeItClient?.fetchSnipeItUsers() ?? []
+  }
+
   private func fetchJamfComputers() async throws -> [JamfComputer] {
     try await jamfClient?.fetchJamfComputers() ?? []
   }
@@ -150,10 +158,12 @@ final class CacheManager {
 
   private func process(
     snipeItAssets: [SnipeItAssetResponse],
+    snipeItUsers: [SnipeItUserResponse],
     jamfComputers: [JamfComputer],
     jamfMobiles: [JamfMobileDevice],
     intuneDevices: [IntuneDevice]
   ) async throws {
+    try processUsers(snipeItUsers)
     let jamfComputerMap = Dictionary(grouping: jamfComputers, by: \.hardware.serialNumber)
     let jamfMobileMap = Dictionary(grouping: jamfMobiles, by: \.hardware.serialNumber)
     let intuneMap = Dictionary(grouping: intuneDevices, by: \.serialNumber)
@@ -181,6 +191,8 @@ final class CacheManager {
       device.statusId = asset.statusLabel?.id
       device.snipeItId = asset.id
       device.notes = asset.notes.nilIfEmpty
+      device.ram = asset[customField: settings.snipeItRAMField]
+      device.storage = asset[customField: settings.snipeItStorageField]
       device.assignedUserName = asset.assignedTo?.name.nilIfEmpty
       device.assignedUserEmail = asset.assignedTo?.email.nilIfEmpty
       device.warrantyExpires = asset.warrantyExpires?.date.flatMap {
@@ -257,5 +269,35 @@ final class CacheManager {
   private func clearDeviceCache() throws {
     try modelContext.delete(model: Device.self)
     try modelContext.save()
+  }
+
+  private func clearUserCache() throws {
+    try modelContext.delete(model: SnipeItUser.self)
+    try modelContext.save()
+  }
+
+  private func processUsers(_ snipeItUsers: [SnipeItUserResponse]) throws {
+    let existing = try modelContext.fetch(FetchDescriptor<SnipeItUser>())
+    var userMap = Dictionary(uniqueKeysWithValues: existing.map { ($0.snipeItId, $0) })
+
+    for userResponse in snipeItUsers {
+      if let user = userMap[userResponse.id] {
+        user.name = userResponse.name.nilIfEmpty
+        user.email = userResponse.email.nilIfEmpty
+      } else {
+        let user = SnipeItUser(
+          snipeItId: userResponse.id,
+          name: userResponse.name.nilIfEmpty,
+          email: userResponse.email.nilIfEmpty
+        )
+        modelContext.insert(user)
+        userMap[userResponse.id] = user
+      }
+    }
+
+    let activeIds = Set(snipeItUsers.map(\.id))
+    for user in existing where !activeIds.contains(user.snipeItId) {
+      modelContext.delete(user)
+    }
   }
 }

@@ -11,38 +11,18 @@ import SwiftUI
 // MARK: - Public API
 
 extension View {
-  #if os(iOS)
-    func deviceSearch(selection: DeviceSelectionState) -> some View {
-      modifier(DeviceSearch(selection: selection, onBatchComplete: nil))
-    }
-
-    func deviceSearch(
-      selection: DeviceSelectionState,
-      onBatchComplete: @escaping ([Device]) -> Void
-    ) -> some View {
-      modifier(DeviceSearch(selection: selection, onBatchComplete: onBatchComplete))
-    }
-  #else
-    func deviceSearch(selection: DeviceSelectionState) -> some View {
-      modifier(DeviceSearch(selection: selection))
-    }
-  #endif
+  func deviceSearch(selection: DeviceSelectionState) -> some View {
+    modifier(DeviceSearch(selection: selection))
+  }
 }
 
 // MARK: - Modifier
 
 private struct DeviceSearch: ViewModifier {
   @Bindable var selection: DeviceSelectionState
-  #if os(iOS)
-    var onBatchComplete: (([Device]) -> Void)?
-  #endif
 
   func body(content: Content) -> some View {
-    #if os(iOS)
-      DeviceSearchBody(content: content, selection: selection, onBatchComplete: onBatchComplete)
-    #else
-      DeviceSearchBody(content: content, selection: selection, onBatchComplete: nil)
-    #endif
+    DeviceSearchBody(content: content, selection: selection)
   }
 }
 
@@ -51,11 +31,8 @@ private struct DeviceSearch: ViewModifier {
 private struct DeviceSearchBody<Content: View>: View {
   let content: Content
   @Bindable var selection: DeviceSelectionState
-  #if os(iOS)
-    var onBatchComplete: (([Device]) -> Void)?
-  #endif
-  @Query private var filteredDevices: [Device]
 
+  @Environment(\.modelContext) private var modelContext
   @Environment(\.dismissSearch) private var dismissSearch
   @State private var isSearchPresented = false
 
@@ -63,31 +40,7 @@ private struct DeviceSearchBody<Content: View>: View {
     @State private var isScanningDevice = false
   #endif
 
-  init(
-    content: Content,
-    selection: DeviceSelectionState,
-    onBatchComplete: (([Device]) -> Void)? = nil
-  ) {
-    self.content = content
-    self.selection = selection
-    #if os(iOS)
-      self.onBatchComplete = onBatchComplete
-    #endif
-    let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
-    var descriptor = FetchDescriptor<Device>(
-      predicate: #Predicate { device in
-        device.serial.localizedStandardContains(q)
-          || device.assetTag.localizedStandardContains(q)
-          || device.assignedUserEmail?.localizedStandardContains(q) == true
-      },
-      sortBy: [SortDescriptor(\Device.name)]
-    )
-    descriptor.fetchLimit = 25
-    _filteredDevices = Query(descriptor)
-  }
-
   var body: some View {
-    let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
     content
       .searchable(
         text: $selection.query,
@@ -97,7 +50,7 @@ private struct DeviceSearchBody<Content: View>: View {
       .contentTransition(.symbolEffect(.replace))
       .animation(.smooth(duration: 0.18), value: selection.selectedDevice?.serial)
       .searchSuggestions {
-        if !q.isEmpty {
+        if !selection.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
           ForEach(filteredDevices) { device in
             Button {
               selection.select(device)
@@ -123,9 +76,6 @@ private struct DeviceSearchBody<Content: View>: View {
                 }
               }
             }
-            .onTapGesture {
-              selection.select(device)
-            }
           }
         }
       }
@@ -136,8 +86,9 @@ private struct DeviceSearchBody<Content: View>: View {
         dismissSearch()
       }
     #if os(iOS)
-      .fullScreenCover(isPresented: $isScanningDevice) {
-        DeviceScannerSheet(selection: selection, onBatchComplete: onBatchComplete)
+      .sheet(isPresented: $isScanningDevice) {
+        DeviceScannerSheet(selection: selection)
+          .presentationDetents([.medium])
       }
       .toolbar {
         // I do want this next to the search field, does not seem achievable...?
@@ -150,5 +101,21 @@ private struct DeviceSearchBody<Content: View>: View {
         }
       }
     #endif
+  }
+
+  private var filteredDevices: [Device] {
+    let q = selection.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !q.isEmpty else { return [] }
+
+    var descriptor = FetchDescriptor<Device>(
+      predicate: #Predicate { device in
+        device.serial.localizedStandardContains(q)
+          || device.assetTag.localizedStandardContains(q)
+          || device.assignedUserEmail?.localizedStandardContains(q) == true
+      },
+      sortBy: [SortDescriptor(\Device.name)]
+    )
+    descriptor.fetchLimit = 25
+    return (try? modelContext.fetch(descriptor)) ?? []
   }
 }

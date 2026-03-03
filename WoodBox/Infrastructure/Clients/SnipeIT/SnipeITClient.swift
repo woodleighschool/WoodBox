@@ -59,6 +59,31 @@ struct SnipeITClient: Sendable {
     _ = try await http.data(for: request, action: "patch asset", integration: "Snipe-IT")
   }
 
+  func checkoutSnipeItAsset(assetId: Int, request checkout: SnipeItCheckoutRequest) async throws {
+    let url = baseURL.appending(path: "api/v1/hardware/\(assetId)/checkout")
+    var request = authorizedRequest(url: url, method: "POST")
+    request.httpBody = try JSONEncoder().encode(checkout)
+    _ = try await http.data(for: request, action: "checkout asset", integration: "Snipe-IT")
+  }
+
+  func fetchSnipeItUsers() async throws -> [SnipeItUserResponse] {
+    var allUsers: [SnipeItUserResponse] = []
+    var offset = 0
+    let limit = 200
+
+    while true {
+      let page = try await fetchSnipeItUsersPage(limit: limit, offset: offset)
+      allUsers.append(contentsOf: page.rows)
+
+      if page.rows.count < limit {
+        break
+      }
+      offset += limit
+    }
+
+    return allUsers
+  }
+
   // MARK: - Private Helpers
 
   private func fetchSnipeItAssetsPage(limit: Int, offset: Int) async throws -> SnipeItAssetsResponse {
@@ -74,6 +99,23 @@ struct SnipeITClient: Sendable {
       SnipeItAssetsResponse.self,
       from: request,
       action: "fetch assets",
+      integration: "Snipe-IT"
+    )
+  }
+
+  private func fetchSnipeItUsersPage(limit: Int, offset: Int) async throws -> SnipeItUsersResponse {
+    let url = baseURL.appending(
+      path: "api/v1/users",
+      queryItems: [
+        URLQueryItem(name: "limit", value: "\(limit)"),
+        URLQueryItem(name: "offset", value: "\(offset)"),
+      ]
+    )
+    let request = authorizedRequest(url: url)
+    return try await http.decode(
+      SnipeItUsersResponse.self,
+      from: request,
+      action: "fetch users",
       integration: "Snipe-IT"
     )
   }
