@@ -25,6 +25,9 @@ import SwiftUI
     @State private var showClearConfirmation = false
     @State private var showDeleteMDMConfirmation = false
     @State private var scanFeedback = false
+    @State private var currentOperationItems: [BulkOperationItem] = []
+    @State private var currentOperationTitle = ""
+    @State private var isOperationSheetPresented = false
 
     private static let csvFormatter = ISO8601DateFormatter()
 
@@ -92,10 +95,13 @@ import SwiftUI
             dismissButton: .default(Text("OK"))
           )
         }
-        .animation(.snappy(duration: 0.22, extraBounce: 0.06), value: scannedDevices.count)
         .sheet(isPresented: $isScanningPresented) {
           scannerSheet
             .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $isOperationSheetPresented) {
+          operationSheet
+            .interactiveDismissDisabled(isBusy)
         }
     }
 
@@ -118,7 +124,7 @@ import SwiftUI
         }
       } else {
         List(scanHistory) { entry in
-          BulkScannedDeviceRow(device: entry.device)
+          DeviceSummaryItem(device: entry.device)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
               Button("Remove", systemImage: "trash", role: .destructive) {
                 removeHistory(entry)
@@ -176,13 +182,64 @@ import SwiftUI
     // MARK: - Private Helpers
 
     private var scannerSheet: some View {
-      ScannerSheetView(
+      DeviceScanner(
         title: "Scan asset tag or serial",
         subtitle: "Keep device centered in the frame",
         trigger: scanFeedback,
         onClose: { isScanningPresented = false },
         onCandidate: handleCandidate
       )
+    }
+
+    private var operationSheet: some View {
+      NavigationStack {
+        List(currentOperationItems) { item in
+          HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+              Text(item.device.serial)
+                .font(.headline)
+              if let details = item.details {
+                Text(details)
+                  .font(.caption)
+                  .foregroundStyle(item.status == .failed ? .red : .secondary)
+              }
+            }
+
+            Spacer(minLength: 8)
+
+            switch item.status {
+            case .pending:
+              Image(systemName: "circle")
+                .foregroundStyle(.secondary)
+            case .processing:
+              ProgressView().controlSize(.small)
+            case .success:
+              Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+            case .failed:
+              Image(systemName: "exclamationmark.circle.fill")
+                .foregroundStyle(.red)
+            case .skipped:
+              Image(systemName: "arrow.uturn.forward.circle.fill")
+                .foregroundStyle(.secondary)
+            }
+          }
+          .padding(.vertical, 2)
+        }
+        .navigationTitle(currentOperationTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+          ToolbarItem(placement: .topBarTrailing) {
+            if !isBusy {
+              Button("Done") {
+                isOperationSheetPresented = false
+              }
+            } else {
+              ProgressView().controlSize(.regular)
+            }
+          }
+        }
+      }
     }
 
     @MainActor
@@ -197,19 +254,20 @@ import SwiftUI
         return
       }
 
-      upsertHistory(device)
-      scanFeedback.toggle()
+      if upsertHistory(device) {
+        scanFeedback.toggle()
+      }
     }
 
     @MainActor
-    private func upsertHistory(_ device: Device) {
-      if let existing = scanHistory.first(where: { $0.device == device }) {
-        existing.scannedAt = Date()
-      } else {
-        modelContext.insert(BulkScanHistoryItem(device: device))
+    private func upsertHistory(_ device: Device) -> Bool {
+      guard scanHistory.first(where: { $0.device == device }) == nil else {
+        return false // ignore repeats entirely
       }
 
+      modelContext.insert(BulkScanHistoryItem(device: device))
       try? modelContext.save()
+      return true
     }
 
     @MainActor
@@ -229,44 +287,55 @@ import SwiftUI
       guard let client = settings.snipeItClient else { return }
 
       await withBusyState {
-        guard !scannedDevices.isEmpty else { return }
+        guard !scanHistory.isEmpty else { return }
 
-        var updatedCount = 0
-        var skippedCount = 0
-        var failedCount = 0
+        currentOperationTitle = "Updating Snipe-IT Status"
+        currentOperationItems = scanHistory.map {
+          BulkOperationItem(id: $0.id, device: $0.device, status: .pending)
+        }
+        isOperationSheetPresented = true
 
-        for device in scannedDevices {
+        for index in currentOperationItems.indices {
+          let item = currentOperationItems[index]
+          let device = item.device
+
           guard let assetId = device.snipeItId else {
-            skippedCount += 1
+            currentOperationItems[index].status = .skipped
+            currentOperationItems[index].details = "No Snipe-IT ID"
             continue
           }
 
-          do {
-            try await client.checkinSnipeItAsset(
-              assetId: assetId,
-              request: SnipeItCheckinRequest(
-                statusId: statusId,
-                name: nil,
-                note: nil,
-                locationId: nil
-              )
-            )
-            updatedCount += 1
-          } catch {
-            failedCount += 1
-          }
-        }
+          currentOperationItems[index].status = .processing
 
-        if failedCount > 0 {
-          alertItem = AlertItem(
-            title: "Snipe-IT Update Completed with Errors",
-            message: "Updated \(updatedCount), failed \(failedCount), skipped \(skippedCount)."
-          )
-        } else if updatedCount == 0 {
-          alertItem = AlertItem(
-            title: "No Snipe-IT Assets Updated",
-            message: "No scanned devices had a Snipe-IT asset ID."
-          )
+          do {
+            if device.assignedUserName != nil || device.assignedUserEmail != nil {
+              try await client.checkinSnipeItAsset(
+                assetId: assetId,
+                request: SnipeItCheckinRequest(
+                  statusId: statusId,
+                  name: nil,
+                  note: nil,
+                  locationId: nil
+                )
+              )
+            } else {
+              try await client.updateSnipeItAsset(
+                assetId: assetId,
+                request: SnipeItUpdateRequest(
+                  statusId: statusId,
+                  notes: nil,
+                  customFields: nil
+                )
+              )
+            }
+            device.statusId = statusId
+            device.assignedUserName = nil
+            device.assignedUserEmail = nil
+            currentOperationItems[index].status = .success
+          } catch {
+            currentOperationItems[index].status = .failed
+            currentOperationItems[index].details = error.localizedDescription
+          }
         }
       }
     }
@@ -276,10 +345,25 @@ import SwiftUI
       await withBusyState {
         guard hasMDMRecords else { return }
 
-        var deletedCount = 0
-        var failedCount = 0
+        currentOperationTitle = "Deleting from MDM"
+        currentOperationItems = scanHistory.map {
+          BulkOperationItem(id: $0.id, device: $0.device, status: .pending)
+        }
+        isOperationSheetPresented = true
 
-        for device in scannedDevices where !device.mdmRecords.isEmpty {
+        for index in currentOperationItems.indices {
+          let item = currentOperationItems[index]
+          let device = item.device
+
+          guard !device.mdmRecords.isEmpty else {
+            currentOperationItems[index].status = .skipped
+            currentOperationItems[index].details = "No MDM records"
+            continue
+          }
+
+          currentOperationItems[index].status = .processing
+
+          var hasError = false
           for record in device.mdmRecords {
             do {
               try await MDMDeletionService.deleteAndRemove(
@@ -287,23 +371,15 @@ import SwiftUI
                 from: device,
                 modelContext: modelContext
               )
-              deletedCount += 1
             } catch {
-              failedCount += 1
+              hasError = true
             }
           }
-        }
 
-        if failedCount > 0 {
-          alertItem = AlertItem(
-            title: "MDM Deletion Completed with Errors",
-            message: "Deleted \(deletedCount), failed \(failedCount)."
-          )
-        } else if deletedCount == 0 {
-          alertItem = AlertItem(
-            title: "No MDM Records Deleted",
-            message: "None of the scanned devices have MDM records to delete."
-          )
+          currentOperationItems[index].status = hasError ? .failed : .success
+          if hasError {
+            currentOperationItems[index].details = "Deletion failed"
+          }
         }
       }
     }
@@ -321,41 +397,22 @@ import SwiftUI
     }
   }
 
-  // MARK: - Subviews
+  // MARK: - Supporting Types
 
-  private struct BulkScannedDeviceRow: View {
-    let device: Device
-
-    var body: some View {
-      VStack(alignment: .leading, spacing: 6) {
-        Text(device.model)
-          .font(.headline)
-          .lineLimit(1)
-
-        HStack(spacing: 10) {
-          if !device.assetTag.isEmpty {
-            Label(device.assetTag, systemImage: "barcode")
-          }
-
-          Label(device.serial, systemImage: "number")
-
-          if let expires = device.warrantyExpires {
-            Label(
-              expires.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year(.twoDigits)),
-              systemImage: "shield"
-            )
-          }
-        }
-        .font(.caption.monospacedDigit())
-        .foregroundStyle(.secondary)
-        .labelStyle(.titleAndIcon)
-        .lineLimit(1)
-      }
-      .padding(.vertical, 4)
-    }
+  private enum OperationStatus: Equatable {
+    case pending
+    case processing
+    case success
+    case failed
+    case skipped
   }
 
-  // MARK: - Supporting Types
+  private struct BulkOperationItem: Identifiable {
+    var id: PersistentIdentifier
+    let device: Device
+    var status: OperationStatus
+    var details: String?
+  }
 
   private struct SnipeStatusAction: Identifiable {
     let title: String

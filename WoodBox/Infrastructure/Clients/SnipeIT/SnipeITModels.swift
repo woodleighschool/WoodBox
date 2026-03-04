@@ -129,21 +129,17 @@ struct SnipeItAssetResponse: Decodable {
 }
 
 struct SnipeItAssetCustomField: Decodable {
+  let field: String
   let value: String?
 
   private enum CodingKeys: String, CodingKey {
+    case field
     case value
   }
 
   init(from decoder: Decoder) throws {
-    if let singleValueContainer = try? decoder.singleValueContainer(),
-       let rawValue = try? singleValueContainer.decode(String.self)
-    {
-      value = rawValue.nilIfEmpty
-      return
-    }
-
     let container = try decoder.container(keyedBy: CodingKeys.self)
+    field = try container.decode(String.self, forKey: .field)
     value = try container.decodeIfPresent(String.self, forKey: .value).nilIfEmpty
   }
 }

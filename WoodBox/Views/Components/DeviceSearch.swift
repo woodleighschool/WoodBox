@@ -47,8 +47,6 @@ private struct DeviceSearchBody<Content: View>: View {
         isPresented: $isSearchPresented,
         prompt: "Pick a Device..."
       )
-      .contentTransition(.symbolEffect(.replace))
-      .animation(.smooth(duration: 0.18), value: selection.selectedDevice?.serial)
       .searchSuggestions {
         if !selection.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
           ForEach(filteredDevices) { device in

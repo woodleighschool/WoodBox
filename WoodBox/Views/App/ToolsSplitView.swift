@@ -88,7 +88,6 @@ struct ToolsSplitView: View {
       #endif
     }
     .tabViewStyle(.sidebarAdaptable)
-    .animation(.smooth(duration: 0.2), value: modelData.selectedTab)
     #if os(macOS)
       .toolbar {
         // Want this in the sidebar, seems to be no way to do this again...?

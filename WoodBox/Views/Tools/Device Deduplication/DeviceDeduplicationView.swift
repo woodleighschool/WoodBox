@@ -37,7 +37,6 @@ struct DeviceDeduplicationView: View {
             DuplicateGroupSection(device: device, settings: modelData.settings) { record in
               pendingDeletion = (record, device)
             }
-            .contentTransition(.symbolEffect(.replace))
           }
         }
       }
@@ -117,7 +116,6 @@ struct DuplicateGroupSection: View {
         DuplicateRecordRow(record: record, isLatest: record.id == latestId, settings: settings) {
           onDelete(record)
         }
-        .contentTransition(.opacity)
       }
     } header: {
       HStack(spacing: 8) {

@@ -96,7 +96,6 @@ struct SettingsView: View {
         } label: {
           Label(section.title, systemImage: section.systemImage)
         }
-        .contentTransition(.symbolEffect(.replace))
       }
       .navigationTitle("Settings")
     #endif
@@ -163,8 +162,6 @@ struct SnipeItSettingsView: View {
         TextField("Spare Status ID", value: $settings.snipeItSpareStatusId, format: .number)
         TextField("Condition Custom Field", text: $settings.snipeItConditionField)
         TextField("Condition Notes Custom Field", text: $settings.snipeItConditionNotesField)
-        TextField("RAM Custom Field", text: $settings.snipeItRAMField)
-        TextField("Storage Custom Field", text: $settings.snipeItStorageField)
       }
     }
     .formStyle(.grouped)

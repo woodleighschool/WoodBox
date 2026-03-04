@@ -49,9 +49,6 @@ struct SalePreparationView: View {
     formContent
       .formStyle(.grouped)
       .deviceSearch(selection: deviceSelection)
-      .animation(
-        .snappy(duration: 0.22, extraBounce: 0.06), value: deviceSelection.selectedDevice?.serial
-      )
       .scrollDismissesKeyboard(.interactively)
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
@@ -102,7 +99,7 @@ struct SalePreparationView: View {
 
   private var deviceSection: some View {
     Section("Device") {
-      DeviceCard(
+      DeviceSummaryItem(
         device: deviceSelection.selectedDevice,
         onClear: deviceSelection.clear
       )

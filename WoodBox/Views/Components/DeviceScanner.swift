@@ -1,8 +1,8 @@
 //
-//  DeviceScannerShared.swift
+//  DeviceScanner.swift
 //  WoodBox
 //
-//  Shared scanning primitives used across device selection and bulk scanning.
+//  Created by Alexander Hyde on 21/2/2026.
 //
 
 import SwiftData
@@ -33,7 +33,7 @@ import SwiftUI
     }
   }
 
-  // MARK: - ModelContext helper
+  // MARK: - Extensions
 
   extension ModelContext {
     func fetchDevice(matching value: String, scanType: ScanType) -> Device? {
@@ -48,10 +48,108 @@ import SwiftUI
     }
   }
 
-  // MARK: - Camera view
+  // MARK: - DeviceScanner
 
-  struct DeviceScannerCameraView: UIViewControllerRepresentable {
+  struct DeviceScanner<Trigger: Equatable>: View {
+    // MARK: - Properties
+
+    let title: String
+    let subtitle: String
+    let trigger: Trigger
+    let onClose: () -> Void
+    let onCandidate: (String, ScanType) -> Void
+
+    // MARK: - Body
+
+    var body: some View {
+      NavigationStack {
+        GeometryReader { proxy in
+          DeviceScannerCameraView(onCandidate: onCandidate)
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .ignoresSafeArea(edges: .bottom)
+        .toolbar {
+          ToolbarItem(placement: .principal) {
+            VStack(spacing: 2) {
+              Text(title).font(.headline)
+              Text(subtitle).font(.footnote).foregroundStyle(.secondary)
+            }
+          }
+          ToolbarItem(placement: .cancellationAction) {
+            Button(action: onClose) {
+              Image(systemName: "xmark")
+            }
+          }
+        }
+        .toolbarTitleDisplayMode(.inline)
+        .sensoryFeedback(.success, trigger: trigger)
+      }
+    }
+  }
+
+  // MARK: - DeviceScannerSheet
+
+  struct DeviceScannerSheet: View {
+    // MARK: - Properties
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @Bindable var selection: DeviceSelectionState
+
+    @State private var notFoundAlert: AlertItem?
+    @State private var scanFeedback = false
+
+    // MARK: - Body
+
+    var body: some View {
+      DeviceScanner(
+        title: "Scan asset tag or serial",
+        subtitle: "Align the code in the frame",
+        trigger: scanFeedback,
+        onClose: { dismiss() },
+        onCandidate: handleCandidate
+      )
+      .presentationDetents([.medium])
+      .alert(item: $notFoundAlert) { item in
+        Alert(
+          title: Text(item.title),
+          message: Text(item.message),
+          dismissButton: .cancel(Text("Close"))
+        )
+      }
+    }
+
+    // MARK: - Private Helpers
+
+    @MainActor
+    private func handleCandidate(_ value: String, type scanType: ScanType) {
+      guard let device = modelContext.fetchDevice(matching: value, scanType: scanType) else {
+        notFoundAlert = AlertItem(
+          title: "Device Not Found",
+          message: "No device with \(scanType.label) \"\(value)\" was found."
+        )
+        return
+      }
+
+      let isNewSelection = selection.selectedDevice != device
+      selection.select(device)
+
+      if isNewSelection {
+        scanFeedback.toggle()
+      }
+      dismiss()
+    }
+  }
+
+  // MARK: - DeviceScannerCameraView
+
+  private struct DeviceScannerCameraView: UIViewControllerRepresentable {
+    // MARK: - Properties
+
     var onCandidate: (String, ScanType) -> Void
+
+    // MARK: - UIViewControllerRepresentable
 
     func makeCoordinator() -> Coordinator {
       Coordinator(onCandidate: onCandidate)
@@ -63,7 +161,7 @@ import SwiftUI
         qualityLevel: .accurate,
         recognizesMultipleItems: false,
         isPinchToZoomEnabled: true,
-        isGuidanceEnabled: true,
+        isGuidanceEnabled: false,
         isHighlightingEnabled: false
       )
       scanner.delegate = context.coordinator
@@ -83,11 +181,17 @@ import SwiftUI
 
     @MainActor
     final class Coordinator: NSObject, DataScannerViewControllerDelegate {
+      // MARK: - Properties
+
       private let onCandidate: (String, ScanType) -> Void
+
+      // MARK: - Init
 
       init(onCandidate: @escaping (String, ScanType) -> Void) {
         self.onCandidate = onCandidate
       }
+
+      // MARK: - DataScannerViewControllerDelegate
 
       func dataScanner(
         _: DataScannerViewController, didAdd items: [RecognizedItem], allItems _: [RecognizedItem]
@@ -115,7 +219,7 @@ import SwiftUI
         }
       }
 
-      // MARK: - Private helpers
+      // MARK: - Private Helpers
 
       private func firstSerialCandidate(in transcript: String) -> String? {
         transcript

@@ -27,11 +27,9 @@ struct CacheRefreshButton: View {
     } label: {
       if cacheManager.isSyncing {
         ProgressView().controlSize(.small)
-          .transition(.opacity)
       } else {
         Image(systemName: symbol.name)
           .foregroundStyle(symbol.color)
-          .contentTransition(.symbolEffect(.replace.downUp))
           .symbolEffect(.bounce, value: showSuccess)
       }
     }

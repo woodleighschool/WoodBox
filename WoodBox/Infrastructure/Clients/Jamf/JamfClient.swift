@@ -76,9 +76,10 @@ struct JamfClient: Sendable {
     _ = try await http.data(for: request, action: "delete computer", integration: "Jamf")
   }
 
-  func deleteJamfMobileDevice(id _: String) async throws {
-    // Jamf Pro has no API endpoint to delete mobile devices
-    throw IntegrationError(action: "delete mobile device", integration: "Jamf", statusCode: 404)
+  func deleteJamfMobileDevice(id: String) async throws {
+    let url = baseURL.appending(path: "JSSResource/mobiledevices/id/\(id)")
+    let request = try await authorizedRequest(url: url, method: "DELETE")
+    _ = try await http.data(for: request, action: "delete mobile device", integration: "Jamf")
   }
 
   // MARK: - Private Helpers

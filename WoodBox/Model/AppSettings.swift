@@ -74,18 +74,6 @@ final class AppSettings {
     }
   }
 
-  var snipeItRAMField: String {
-    didSet {
-      UserDefaults.standard.set(snipeItRAMField, forKey: "snipeItRAMField")
-    }
-  }
-
-  var snipeItStorageField: String {
-    didSet {
-      UserDefaults.standard.set(snipeItStorageField, forKey: "snipeItStorageField")
-    }
-  }
-
   // MARK: - Jamf
 
   var jamfIsEnabled: Bool {
@@ -313,9 +301,6 @@ final class AppSettings {
         ?? UserDefaults.standard.string(forKey: "snipeItConditionNotesFieldKey")
         ?? UserDefaults.standard.string(forKey: "snipeItNotesFieldKey")
         ?? ""
-    snipeItRAMField = UserDefaults.standard.string(forKey: "snipeItRAMField") ?? ""
-    snipeItStorageField = UserDefaults.standard.string(forKey: "snipeItStorageField") ?? ""
-
     jamfIsEnabled = UserDefaults.standard.bool(forKey: "jamfIsEnabled")
     jamfBaseURL = UserDefaults.standard.string(forKey: "jamfBaseURL") ?? ""
     jamfClientId = UserDefaults.standard.string(forKey: "jamfClientId") ?? ""

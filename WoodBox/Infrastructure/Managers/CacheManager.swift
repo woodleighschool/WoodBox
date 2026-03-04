@@ -191,8 +191,8 @@ final class CacheManager {
       device.statusId = asset.statusLabel?.id
       device.snipeItId = asset.id
       device.notes = asset.notes.nilIfEmpty
-      device.ram = asset[customField: settings.snipeItRAMField]
-      device.storage = asset[customField: settings.snipeItStorageField]
+      device.ram = asset[customField: "RAM"]
+      device.storage = asset[customField: "Storage"]
       device.assignedUserName = asset.assignedTo?.name.nilIfEmpty
       device.assignedUserEmail = asset.assignedTo?.email.nilIfEmpty
       device.warrantyExpires = asset.warrantyExpires?.date.flatMap {
