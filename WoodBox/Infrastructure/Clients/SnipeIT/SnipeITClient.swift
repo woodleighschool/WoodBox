@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct SnipeITClient: Sendable {
+struct SnipeITClient {
   // MARK: - Properties
 
   private let baseURL: URL

@@ -78,7 +78,7 @@ final class MDMRecord {
   }
 }
 
-enum MDMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
+enum MDMProvider: String, Codable, CaseIterable, Identifiable {
   case jamf = "Jamf"
   case intune = "Intune"
 
@@ -87,7 +87,7 @@ enum MDMProvider: String, Codable, CaseIterable, Identifiable, Sendable {
   }
 }
 
-enum JamfDeviceType: String, Codable, Sendable {
+enum JamfDeviceType: String, Codable {
   case computer = "Computer"
   case mobile = "Mobile"
 }

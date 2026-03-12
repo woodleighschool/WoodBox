@@ -10,7 +10,7 @@ import Foundation
 // MARK: Check-In Asset
 
 /// Request
-struct SnipeItCheckinRequest: Encodable, Sendable {
+struct SnipeItCheckinRequest: Encodable {
   let statusId: Int
   let name: String?
   let note: String?
@@ -27,7 +27,7 @@ struct SnipeItCheckinRequest: Encodable, Sendable {
 // MARK: Check-Out Asset
 
 /// Request
-struct SnipeItCheckoutRequest: Encodable, Sendable {
+struct SnipeItCheckoutRequest: Encodable {
   let checkoutToType = "user"
   let assignedUser: Int
   let statusId: Int
@@ -57,7 +57,7 @@ struct SnipeItUserResponse: Decodable {
 // MARK: Update Asset
 
 /// Request
-struct SnipeItUpdateRequest: Encodable, Sendable {
+struct SnipeItUpdateRequest: Encodable {
   let statusId: Int?
   let notes: String?
   let customFields: [String: String]?

@@ -30,6 +30,13 @@ import SwiftUI
     @State private var isOperationSheetPresented = false
 
     private static let csvFormatter = ISO8601DateFormatter()
+    private static let exportFilenameFormatter: DateFormatter = {
+      let formatter = DateFormatter()
+      formatter.locale = Locale(identifier: "en_US_POSIX")
+      formatter.timeZone = .current
+      formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+      return formatter
+    }()
 
     // MARK: - Computed Properties
 
@@ -57,11 +64,12 @@ import SwiftUI
     }
 
     private var exportCSV: String {
-      var rows = ["Serial,Asset Tag,Model,Warranty Expires"]
+      var rows = ["Serial,Asset Tag,Scanned At"]
 
-      for device in scannedDevices {
-        let warranty = device.warrantyExpires.map(Self.csvFormatter.string(from:)) ?? ""
-        let fields = [device.serial, device.assetTag, device.model, warranty]
+      for entry in scanHistory.reversed() {
+        let device = entry.device
+        let scannedAt = Self.csvFormatter.string(from: entry.scannedAt)
+        let fields = [device.serial, device.assetTag, scannedAt]
         rows.append(fields.map(csvEscape).joined(separator: ","))
       }
 
@@ -151,8 +159,10 @@ import SwiftUI
             showClearConfirmation = true
           }
 
-          ShareLink(item: exportCSV, subject: Text("Scanned Devices")) {
-            Label("Export", systemImage: "square.and.arrow.up")
+          if let exportURL = makeExportFileURL() {
+            ShareLink(item: exportURL, subject: Text("Scanned Devices")) {
+              Label("Export", systemImage: "square.and.arrow.up")
+            }
           }
 
           if settings.snipeItIsEnabled,
@@ -189,6 +199,20 @@ import SwiftUI
         onClose: { isScanningPresented = false },
         onCandidate: handleCandidate
       )
+    }
+
+    private func makeExportFileURL() -> URL? {
+      let filename = "bulk-scanner-\(Self.exportFilenameFormatter.string(from: .now)).csv"
+      let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+
+      guard let data = exportCSV.data(using: .utf8) else { return nil }
+
+      do {
+        try data.write(to: url, options: .atomic)
+        return url
+      } catch {
+        return nil
+      }
     }
 
     private var operationSheet: some View {

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct IntegrationError: LocalizedError, Sendable {
+struct IntegrationError: LocalizedError {
   // MARK: - Properties
 
   let action: String

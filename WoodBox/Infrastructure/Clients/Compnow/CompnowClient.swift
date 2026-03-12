@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct CompnowClient: Sendable {
+struct CompnowClient {
   // MARK: - Properties
 
   #if DEBUG

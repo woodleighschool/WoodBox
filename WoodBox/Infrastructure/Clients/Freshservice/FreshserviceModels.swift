@@ -10,7 +10,7 @@ import Foundation
 // MARK: Create Ticket
 
 /// Request
-struct FreshserviceTicketRequest: Encodable, Sendable {
+struct FreshserviceTicketRequest: Encodable {
   let email: String
   let subject: String
   let description: String
@@ -33,23 +33,23 @@ struct FreshserviceTicketRequest: Encodable, Sendable {
 }
 
 /// Response
-struct FreshserviceTicketResponse: Decodable, Sendable {
+struct FreshserviceTicketResponse: Decodable {
   let ticket: FreshserviceTicket
 }
 
-struct FreshserviceTicket: Decodable, Sendable {
+struct FreshserviceTicket: Decodable {
   let id: Int
 }
 
 /// Misc
-enum FreshserviceTicketStatus: Int, Codable, Sendable {
+enum FreshserviceTicketStatus: Int, Codable {
   case open = 2
   case pending = 3
   case resolved = 4
   case closed = 5
 }
 
-enum FreshserviceTicketPriority: Int, Codable, Sendable {
+enum FreshserviceTicketPriority: Int, Codable {
   case low = 1
   case medium = 2
   case high = 3
@@ -59,7 +59,7 @@ enum FreshserviceTicketPriority: Int, Codable, Sendable {
 // MARK: Service Requests
 
 /// Request
-struct FreshserviceServiceRequestCreateRequest: Encodable, Sendable {
+struct FreshserviceServiceRequestCreateRequest: Encodable {
   let email: String
   let quantity: Int = 1
   let customFields: [String: String]?
@@ -80,7 +80,7 @@ struct FreshserviceServiceRequestCreateRequest: Encodable, Sendable {
 }
 
 /// Response
-struct FreshserviceServiceRequestCreateResponse: Decodable, Sendable {
+struct FreshserviceServiceRequestCreateResponse: Decodable {
   let serviceRequest: FreshserviceServiceRequest
 
   enum CodingKeys: String, CodingKey {
@@ -88,6 +88,6 @@ struct FreshserviceServiceRequestCreateResponse: Decodable, Sendable {
   }
 }
 
-struct FreshserviceServiceRequest: Decodable, Sendable {
+struct FreshserviceServiceRequest: Decodable {
   let id: Int
 }

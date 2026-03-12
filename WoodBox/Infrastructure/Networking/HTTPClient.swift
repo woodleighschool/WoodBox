@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct HTTPClient: Sendable {
+struct HTTPClient {
   static let shared = HTTPClient()
 
   private let session = URLSession.shared

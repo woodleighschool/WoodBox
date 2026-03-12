@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct JamfClient: Sendable {
+struct JamfClient {
   // MARK: - Properties
 
   private let baseURL: URL

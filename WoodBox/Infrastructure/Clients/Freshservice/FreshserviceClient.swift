@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct FreshserviceClient: Sendable {
+struct FreshserviceClient {
   // MARK: - Properties
 
   private let apiKey: String

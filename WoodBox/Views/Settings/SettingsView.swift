@@ -351,8 +351,6 @@ struct CompnowSettingsView: View {
       }
 
       Section("End User Details") {
-        TextField("First Name", text: $settings.compnowFirstName)
-        TextField("Last Name", text: $settings.compnowLastName)
         TextField("Address", text: $settings.compnowAddress)
         TextField("Suburb", text: $settings.compnowSuburb)
         TextField("State", text: $settings.compnowState)

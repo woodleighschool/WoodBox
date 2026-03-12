@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct AlertItem: Identifiable, Sendable {
+struct AlertItem: Identifiable {
   // MARK: - Properties
 
   let id = UUID()

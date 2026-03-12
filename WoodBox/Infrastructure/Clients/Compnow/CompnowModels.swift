@@ -10,8 +10,7 @@ import Foundation
 // MARK: Create Ticket
 
 /// Request
-struct CompnowTicketCreateRequest: Encodable, Sendable {
-  let endUser: String
+struct CompnowTicketCreateRequest: Encodable {
   let product: String
   let serial: String
   let firstName: String
@@ -30,11 +29,11 @@ struct CompnowTicketCreateRequest: Encodable, Sendable {
 }
 
 /// Response
-struct CompnowTicketCreateResponse: Decodable, Sendable {
+struct CompnowTicketCreateResponse: Decodable {
   let message: String
   let ticket: CompnowTicket
 }
 
-struct CompnowTicket: Decodable, Sendable {
+struct CompnowTicket: Decodable {
   let ticketId: String
 }

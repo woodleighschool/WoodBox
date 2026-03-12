@@ -224,18 +224,6 @@ final class AppSettings {
 
   // MARK: - Compnow Defaults
 
-  var compnowFirstName: String {
-    didSet {
-      UserDefaults.standard.set(compnowFirstName, forKey: "compnowFirstName")
-    }
-  }
-
-  var compnowLastName: String {
-    didSet {
-      UserDefaults.standard.set(compnowLastName, forKey: "compnowLastName")
-    }
-  }
-
   var compnowAddress: String {
     didSet {
       UserDefaults.standard.set(compnowAddress, forKey: "compnowAddress")
@@ -333,8 +321,6 @@ final class AppSettings {
     compnowPassword = keychain.read(key: "compnowPassword") ?? ""
     compnowAPIKey = keychain.read(key: "compnowAPIKey") ?? ""
 
-    compnowFirstName = UserDefaults.standard.string(forKey: "compnowFirstName") ?? ""
-    compnowLastName = UserDefaults.standard.string(forKey: "compnowLastName") ?? ""
     compnowAddress = UserDefaults.standard.string(forKey: "compnowAddress") ?? ""
     compnowSuburb = UserDefaults.standard.string(forKey: "compnowSuburb") ?? ""
     compnowState = UserDefaults.standard.string(forKey: "compnowState") ?? ""

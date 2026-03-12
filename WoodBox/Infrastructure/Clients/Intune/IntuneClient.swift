@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct IntuneClient: Sendable {
+struct IntuneClient {
   // MARK: - Types
 
   private static let graphBaseURL = URL(string: "https://graph.microsoft.com/v1.0")!

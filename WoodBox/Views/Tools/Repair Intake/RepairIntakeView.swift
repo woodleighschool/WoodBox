@@ -187,11 +187,10 @@ struct RepairIntakeView: View {
       if form.createCompnowTicket, let compnowClient = modelData.settings.compnowClient {
         // Create Compnow ticket
         let ticket = CompnowTicketCreateRequest(
-          endUser: form.endUserName,
           product: device.model,
           serial: device.serial,
-          firstName: modelData.settings.compnowFirstName,
-          lastName: modelData.settings.compnowLastName,
+          firstName: form.endUserName,
+          lastName: "",
           address1: modelData.settings.compnowAddress,
           suburb: modelData.settings.compnowSuburb,
           state: modelData.settings.compnowState,
